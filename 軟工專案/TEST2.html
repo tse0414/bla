@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>包裹追蹤與計費系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* ======= 全局樣式 ======= */
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      background: #f5f7fb;
+      color: #222;
+    }
+    header {
+      background: linear-gradient(120deg, #1f4f96, #2c7adf);
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    header small {
+      opacity: 0.8;
+      font-size: 12px;
+    }
+    nav {
+      display: flex;
+      gap: 8px;
+      padding: 8px 32px;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    nav a {
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: #333;
+      background: #eef2f8;
+    }
+    nav a:hover {
+      background: #d9e4ff;
+    }
+
+    main {
+      padding: 16px 32px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section {
+      margin-top: 24px;
+    }
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: #1f4f96;
+    }
+    .section small {
+      color: #666;
+      font-size: 12px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 12px;
+      box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08);
+    }
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 16px;
+      color: #111827;
+    }
+    .card p {
+      margin: 4px 0;
+      font-size: 13px;
+      color: #374151;
+    }
+
+    /* 表單 */
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px 16px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      color: #111827;
+    }
+    input, select, textarea {
+      margin-top: 4px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      resize: vertical;
+    }
+    textarea {
+      min-height: 60px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .btn-row {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-outline {
+      background: #ffffff;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      background: #f3f4f6;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    /* 角色顯示控制說明列 */
+    .role-bar {
+      font-size: 12px;
+      margin-top: 8px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .role-only-client {
+      border-left: 3px solid #10b981;
+      padding-left: 6px;
+    }
+    .role-only-staff {
+      border-left: 3px solid #f59e0b;
+      padding-left: 6px;
+    }
+    .role-only-admin {
+      border-left: 3px solid #ef4444;
+      padding-left: 6px;
+    }
+    .muted {
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 11px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      margin-right: 4px;
+    }
+
+    /* 進階搜尋的 details */
+    details.adv-search {
+      grid-column: 1 / -1;
+      margin-top: 4px;
+      font-size: 13px;
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 8px 10px;
+      border: 1px dashed #d1d5db;
+    }
+    details.adv-search summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #111827;
+      list-style: none;
+    }
+    details.adv-search[open] summary {
+      margin-bottom: 6px;
+    }
+    details.adv-search > div {
+      margin-top: 4px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px 16px;
+    }
+
+    @media (max-width: 640px) {
+      header, nav, main {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>包裹追蹤與計費系統</h1>
+  </div>
+  <div>
+    <label style="font-size:12px;">
+      目前角色：
+      <select id="roleSelect" onchange="onRoleChange()" style="padding:4px 8px;border-radius:999px;border:none;">
+        <option value="client">客戶（只能查詢自己的貨件）</option>
+        <option value="staff">作業人員（客服/倉儲/駕駛）</option>
+        <option value="admin">管理員 / 系統管理員</option>
+      </select>
+    </label>
+  </div>
+</header>
+
+<nav>
+  <a href="#customer">客戶管理</a>
+  <a href="#parcel">包裹收件與服務</a>
+  <a href="#tracking">追蹤與物流</a>
+  <a href="#billing">計費與付款</a>
+  <a href="#security">安全與權限</a>
+</nav>
+
+<main>
+  <!-- ============ 客戶管理 ============ -->
+  <section id="customer" class="section">
+    <h2>客戶管理</h2>
+    <small>儲存客戶檔案、客戶類型與帳單偏好</small>
+    <div class="card role-only-staff role-only-admin">
+      <h3>新增 / 編輯客戶檔案</h3>
+      <form>
+        <label>
+          客戶姓名
+          <input type="text" placeholder="例如：王小明" />
+        </label>
+        <label>
+          電子郵件
+          <input type="email" placeholder="example@mail.com" />
+        </label>
+        <label>
+          聯絡電話
+          <input type="tel" placeholder="09xx-xxx-xxx" />
+        </label>
+        <label>
+          客戶帳號（系統產生或手動輸入）
+          <input type="text" placeholder="CUST-20251128001" />
+        </label>
+
+        <label class="full-width">
+          地址
+          <input type="text" placeholder="縣市、區域、路名、門牌…" />
+        </label>
+
+        <label>
+          客戶類型
+          <select>
+            <option>合約客戶（月結帳戶）</option>
+            <option>非合約客戶（現金 / 信用卡）</option>
+            <option>預付客戶（由第三方支付）</option>
+          </select>
+        </label>
+
+        <label>
+          帳單偏好設定
+          <select>
+            <option>月結帳單</option>
+            <option>貨到付款</option>
+            <option>預付（交件時已付清）</option>
+          </select>
+        </label>
+
+        <label class="full-width">
+          備註
+          <textarea placeholder="例如：長期合作、重要客戶、特別帳單需求…"></textarea>
+        </label>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary">儲存客戶資料</button>
+          <button type="reset" class="btn-outline">清除表單</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card role-only-staff role-only-admin">
+      <h3>客戶列表（示意）</h3>
+      <p class="muted">可依客戶帳號、姓名、類型搜尋與篩選。</p>
+      <table>
+        <thead>
+        <tr>
+          <th>客戶帳號</th>
+          <th>姓名</th>
+          <th>類型</th>
+          <th>帳單偏好</th>
+          <th>電話</th>
+          <th>電子郵件</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>CUST-0001</td>
+          <td>王小明</td>
+          <td>合約客戶</td>
+          <td>月結帳單</td>
+          <td>0912-345-678</td>
+          <td>xm_wang@example.com</td>
+        </tr>
+        <tr>
+          <td>CUST-0002</td>
+          <td>陳小姐</td>
+          <td>非合約客戶</td>
+          <td>貨到付款</td>
+          <td>0988-222-333</td>
+          <td>chen@example.com</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 包裹收件與服務分類 ============ -->
+  <section id="parcel" class="section">
+    <h2>包裹服務分類與收件準備</h2>
+    <small>設定服務類型、特殊標示與包裹屬性</small>
+
+    <div class="card role-only-staff role-only-admin">
+      <h3>建立包裹（分配追蹤編號）</h3>
+      <form>
+        <label>
+          追蹤編號
+          <div style="display:flex; gap:6px;">
+            <input id="trackingInput" type="text" placeholder="按『產生』自動生成" />
+            <button type="button" class="btn-outline" onclick="generateTrackingId()">產生</button>
+          </div>
+        </label>
+
+        <label>
+          寄件客戶帳號
+          <input id="senderAccount" type="text" placeholder="例如：CUST-0001" />
+        </label>
+
+        <label>
+          收件人姓名
+          <input id="receiverName" type="text" placeholder="收件人姓名" />
+        </label>
+
+        <label>
+          收件人電話
+          <input id="receiverPhone" type="tel" placeholder="收件人電話" />
+        </label>
+
+        <label class="full-width">
+          收件地址
+          <input id="receiverAddress" type="text" placeholder="收件地址" />
+        </label>
+
+        <label>
+          包裹類型
+          <select id="parcelType">
+            <option>平郵信封</option>
+            <option>小型箱</option>
+            <option>中型箱</option>
+            <option>大型箱</option>
+          </select>
+        </label>
+
+        <label>
+          重量（kg）
+          <input id="weightInput" type="number" step="0.01" placeholder="例如：1.5" />
+        </label>
+
+        <label>
+          尺寸（長×寬×高，cm）
+          <input id="sizeInput" type="text" placeholder="例如：30 x 20 x 15" />
+        </label>
+
+        <label>
+          配送時效
+          <select id="serviceTime">
+            <option>隔夜達</option>
+            <option>兩日達</option>
+            <option>標準速遞</option>
+            <option>經濟速遞</option>
+          </select>
+        </label>
+
+        <label>
+          申報價值（元）
+          <input id="declaredValue" type="number" step="1" placeholder="例如：3000" />
+        </label>
+
+        <label class="full-width">
+          內容物描述（若需）
+          <textarea id="contentDesc" placeholder="例如：書籍、衣物、電子產品…"></textarea>
+        </label>
+
+        <label class="full-width">
+          特殊服務標示
+          <div>
+            <label style="display:inline-flex;align-items:center;margin-right:12px;">
+              <input id="flagDangerous" type="checkbox" /> 危險物品
+            </label>
+            <label style="display:inline-flex;align-items:center;margin-right:12px;">
+              <input id="flagFragile" type="checkbox" /> 易碎品
+            </label>
+            <label style="display:inline-flex;align-items:center;">
+              <input id="flagIntl" type="checkbox" /> 國際貨件要求
+            </label>
+          </div>
+        </label>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary">儲存包裹資料（前端示意）</button>
+          <button type="reset" class="btn-outline">清除表單</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card role-only-admin">
+      <h3>服務類型與定價規則（示意設定）</h3>
+      <table>
+        <thead>
+        <tr>
+          <th>服務代碼</th>
+          <th>包裹類型</th>
+          <th>時效</th>
+          <th>基本價（元）</th>
+          <th>重量階層</th>
+          <th>附加費用規則</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>SVC-OVN</td>
+          <td>小型箱</td>
+          <td>隔夜達</td>
+          <td>150</td>
+          <td>每 1kg + 30 元</td>
+          <td>危險品 +80、易碎 +50</td>
+        </tr>
+        <tr>
+          <td>SVC-STD</td>
+          <td>中型箱</td>
+          <td>標準速遞</td>
+          <td>120</td>
+          <td>每 1kg + 20 元</td>
+          <td>超大件 +100</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 追蹤與物流 ============ -->
+  <section id="tracking" class="section">
+    <h2>追蹤與物流</h2>
+    <small>查詢貨態、顯示事件歷程、支援多種搜尋條件與異常追蹤</small>
+
+    <div class="card">
+      <h3>包裹查詢介面</h3>
+      <p class="muted">預設依「追蹤編號」查詢，展開下方「進階搜尋」可依客戶帳號、日期範圍、倉儲地點等條件搜尋（對應需求 1.4 第 14 點）。</p>
+      <form>
+        <!-- 基本搜尋：追蹤編號 -->
+        <label class="full-width">
+          追蹤編號（客戶最常用）
+          <input type="text" placeholder="輸入追蹤編號，例如：TRK-20251128-001" />
+        </label>
+
+        <!-- 進階搜尋：用 details 包起來，純 HTML 就可收合 -->
+        <details class="adv-search">
+          <summary>進階搜尋條件（客戶帳號 / 日期範圍 / 貨車 / 倉儲 / 異常狀態）</summary>
+          <div>
+            <label class="role-only-staff role-only-admin">
+              客戶帳號
+              <input type="text" placeholder="CUST-0001" />
+            </label>
+            <label class="role-only-staff role-only-admin">
+              運送日期（起）
+              <input type="date" />
+            </label>
+            <label class="role-only-staff role-only-admin">
+              運送日期（迄）
+              <input type="date" />
+            </label>
+
+            <label class="role-only-staff role-only-admin">
+              運輸載具識別碼（貨車）
+              <input type="text" placeholder="例如：TRUCK-08" />
+            </label>
+            <label class="role-only-staff role-only-admin">
+              倉儲地點代碼
+              <input type="text" placeholder="例如：WH-TPE-01" />
+            </label>
+
+            <label class="full-width">
+              異常狀態
+              <select>
+                <option>全部</option>
+                <option>遺失</option>
+                <option>延誤</option>
+                <option>損毀</option>
+              </select>
+            </label>
+          </div>
+        </details>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary">查詢包裹狀態（前端示意）</button>
+          <button type="reset" class="btn-outline">清除條件</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>包裹當前狀態與歷史事件（示意）</h3>
+      <p>
+        <span class="pill">追蹤編號：TRK-20251128-001</span>
+        <span class="pill">目前狀態：配送中</span>
+        <span class="pill">異常：無</span>
+      </p>
+
+      <table>
+        <thead>
+        <tr>
+          <th>事件時間戳記</th>
+          <th>事件類型</th>
+          <th>地點 / 倉儲</th>
+          <th>說明</th>
+          <th class="role-only-staff role-only-admin">操作人 / 載具</th>
+        </tr>
+        </thead>
+        <tbody id="trackingEventsBody">
+        <tr>
+          <td>2025-11-27 09:12</td>
+          <td>起運地收件</td>
+          <td>台北市信義區門市</td>
+          <td>收件完成，等待撿貨</td>
+          <td class="role-only-staff role-only-admin">門市人員 A01</td>
+        </tr>
+        <tr>
+          <td>2025-11-27 14:30</td>
+          <td>進入貨車</td>
+          <td>WH-TPE-01</td>
+          <td>裝車完成，準備前往中轉站</td>
+          <td class="role-only-staff role-only-admin">TRUCK-08</td>
+        </tr>
+        <tr>
+          <td>2025-11-28 08:05</td>
+          <td>配送中</td>
+          <td>新北市中和區</td>
+          <td>配送中，預計今日送達</td>
+          <td class="role-only-staff role-only-admin">駕駛 B09</td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="role-only-staff role-only-admin" style="margin-top:10px;">
+        <strong style="font-size:13px;">新增事件（內部使用示意）</strong>
+        <form style="margin-top:8px;">
+          <label>
+            事件時間
+            <input type="datetime-local" id="eventTime" />
+          </label>
+          <label>
+            事件類型
+            <select id="eventType">
+              <option>起運地收件</option>
+              <option>進入貨車</option>
+              <option>離開貨車</option>
+              <option>進入倉儲</option>
+              <option>分揀</option>
+              <option>轉運</option>
+              <option>配送中</option>
+              <option>最終投遞</option>
+              <option>簽收完成</option>
+              <option>延誤</option>
+              <option>遺失</option>
+              <option>損毀</option>
+            </select>
+          </label>
+          <label>
+            地點 / 倉儲代碼
+            <input type="text" id="eventLocation" placeholder="例如：WH-KHH-02" />
+          </label>
+          <label class="full-width">
+            說明
+            <input type="text" id="eventNote" placeholder="簡要說明此事件…" />
+          </label>
+          <div class="btn-row">
+            <button type="button" class="btn-outline" onclick="addTrackingEvent()">加入事件（示意）</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 計費與付款 ============ -->
+  <section id="billing" class="section">
+    <h2>計費與付款</h2>
+    <small>依服務類型、距離、重量/體積與特殊處理費進行計算；支援多種付款方式與帳單管理。</small>
+
+    <div class="card">
+      <h3>試算運費（示意）</h3>
+      <p class="muted">
+        對應需求 1.5 第 16 點：前端提供「距離 Distance」與「體積 Volume」欄位，實際計費公式由後端（例如 PricingRule.calculate_cost）實作。
+      </p>
+
+      <form>
+        <label>
+          服務類型
+          <select id="billServiceType">
+            <option value="150">隔夜達</option>
+            <option value="120">標準速遞</option>
+            <option value="90">經濟速遞</option>
+          </select>
+          <span class="muted">（選項值暫作基本價示意，實際金額可由後端覆蓋）</span>
+        </label>
+
+        <label>
+          距離（km）
+          <input type="number" id="billDistance" step="1" placeholder="例如：30（由前端輸入公里數）" />
+        </label>
+
+        <label>
+          重量（kg）
+          <input type="number" id="billWeight" step="0.1" placeholder="例如：2.5" />
+        </label>
+
+        <label>
+          體積（立方公分或其他單位）
+          <input type="number" id="billVolume" step="1" placeholder="例如：12000" />
+        </label>
+
+        <label class="full-width">
+          特殊處理
+          <div>
+            <label style="display:inline-flex;align-items:center;margin-right:12px;">
+              <input type="checkbox" id="optDangerous" /> 危險品（示意附加費）
+            </label>
+            <label style="display:inline-flex;align-items:center;margin-right:12px;">
+              <input type="checkbox" id="optFragile" /> 易碎（示意附加費）
+            </label>
+            <label style="display:inline-flex;align-items:center;">
+              <input type="checkbox" id="optOversize" /> 超大件（示意附加費）
+            </label>
+          </div>
+        </label>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary" onclick="calculatePrice()">計算預估運費</button>
+        </div>
+      </form>
+
+      <p style="margin-top:10px;">
+        預估運費：
+        <strong id="priceResult">尚未計算</strong>
+      </p>
+      <p class="muted">
+        示意說明：實際系統中，計費公式可為：<br>
+        運費 = 基本費 + (距離 × 0.5) + (重量 × 10) +（視需要加入體積因子）+ 特殊處理費。<br>
+        這裡僅用簡化公式在前端展示，真正金額應由後端 PricingRule 決定。
+      </p>
+    </div>
+
+    <!-- 新增：月結帳單報表（對應需求 1.5 第 18 點） -->
+    <div class="card role-only-staff role-only-admin">
+      <h3>月結帳單報表（示意）</h3>
+      <p class="muted">
+        對應需求 1.5 第 18 點：產生「指定客戶」在「某個月份」的所有貨件清單與總金額。<br>
+        前端提供輸入欄位與結果表格，實際資料由後端 API（例如 /api/billing/report）回傳。
+      </p>
+      <form>
+        <label>
+          客戶帳號
+          <input type="text" placeholder="例如：CUST-0001" />
+        </label>
+        <label>
+          計費月份
+          <input type="month" />
+        </label>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary">產生月結報表（前端示意）</button>
+        </div>
+      </form>
+
+      <table>
+        <thead>
+        <tr>
+          <th>貨件追蹤編號</th>
+          <th>寄件日期</th>
+          <th>服務類型</th>
+          <th>金額（元）</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td colspan="4" class="muted">實作完成後，後端將回傳此月份所有貨件資料並填入此表格，並可在表格下方顯示「合計金額」。</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card role-only-staff role-only-admin">
+      <h3>付款方式與帳單管理（示意）</h3>
+      <p class="muted">對應需求 1.5 第 17, 18, 19 點，展示不同帳戶的計費週期與歷史紀錄。</p>
+      <table>
+        <thead>
+        <tr>
+          <th>帳戶/客戶</th>
+          <th>計費週期</th>
+          <th>貨件數量</th>
+          <th>總金額（元）</th>
+          <th>付款方式</th>
+          <th>狀態</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>CUST-0001（王小明）</td>
+          <td>2025-11</td>
+          <td>35</td>
+          <td>12,800</td>
+          <td>月結（匯款）</td>
+          <td>已出帳</td>
+        </tr>
+        <tr>
+          <td>CUST-0002（陳小姐）</td>
+          <td>單筆</td>
+          <td>1</td>
+          <td>220</td>
+          <td>貨到付款（現金）</td>
+          <td>已付清</td>
+        </tr>
+        <tr>
+          <td>CUST-0003（ABC 商家）</td>
+          <td>預付方案</td>
+          <td>50</td>
+          <td>0（交件時已收取）</td>
+          <td>預付貨件</td>
+          <td>歷史紀錄</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 安全與權限 ============ -->
+  <section id="security" class="section">
+    <h2>安全與權限</h2>
+    <small>依角色限制功能可見性與資料存取。</small>
+
+    <div class="card">
+      <h3>角色與權限示意</h3>
+      <div class="role-bar">
+        <span class="tag">客戶服務人員</span>
+        <span class="tag">倉儲人員</span>
+        <span class="tag">駕駛員</span>
+        <span class="tag">管理人員</span>
+        <span class="tag">系統管理員</span>
+      </div>
+      <p style="margin-top:8px;font-size:13px;">
+        上方右上角的「目前角色」下拉選單，目前僅用來「前端隱藏/顯示」不同區塊，方便 Demo。<br>
+        實際系統中，後端 API 需再檢查呼叫者身分，例如在請求中一併送出 <code>current_role</code> 或 Token，若非管理員則拒絕敏感操作（對應需求 1.6 第 20, 21 點）。
+      </p>
+      <ul style="font-size:13px; margin-top:4px; padding-left:20px;">
+        <li>客戶：僅可看到「查詢包裹狀態」與自身貨件相關的資料。</li>
+        <li>作業人員：可維護客戶資料、建立包裹、更新物流事件。</li>
+        <li>管理員 / 系統管理員：可調整服務類型與定價、檢視所有帳單與統計資訊。</li>
+        <li>即使前端隱藏按鈕，後端仍需驗證權限，避免「直接呼叫 API」造成未授權存取。</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ===== 角色切換，控制畫面顯示（僅前端示意） =====
+  function onRoleChange() {
+    const role = document.getElementById('roleSelect').value;
+
+    document.querySelectorAll('.role-only-client, .role-only-staff, .role-only-admin')
+      .forEach(el => el.style.display = '');
+
+    if (role === 'client') {
+      document.querySelectorAll('.role-only-staff, .role-only-admin')
+        .forEach(el => el.style.display = 'none');
+    } else if (role === 'staff') {
+      document.querySelectorAll('.role-only-client, .role-only-admin')
+        .forEach(el => el.style.display = '');
+      document.querySelectorAll('.role-only-admin')
+        .forEach(el => el.style.display = 'none');
+    } else if (role === 'admin') {
+      document.querySelectorAll('.role-only-client, .role-only-staff, .role-only-admin')
+        .forEach(el => el.style.display = '');
+    }
+  }
+  onRoleChange();
+
+  // ===== 產生追蹤編號（示意） =====
+  function generateTrackingId() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const rand = Math.floor(Math.random() * 900 + 100); // 3位亂數
+    const id = `TRK-${y}${m}${d}-${rand}`;
+    document.getElementById('trackingInput').value = id;
+  }
+
+  // ===== 追蹤事件示意 =====
+  function addTrackingEvent() {
+    const time = document.getElementById('eventTime').value;
+    const type = document.getElementById('eventType').value;
+    const loc  = document.getElementById('eventLocation').value;
+    const note = document.getElementById('eventNote').value;
+
+    if (!time || !type) {
+      alert('請至少填寫事件時間與事件類型');
+      return;
+    }
+
+    const tbody = document.getElementById('trackingEventsBody');
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td>${time}</td>
+      <td>${type}</td>
+      <td>${loc || ''}</td>
+      <td>${note || ''}</td>
+      <td class="role-only-staff role-only-admin">系統示意</td>
+    `;
+    tbody.appendChild(tr);
+
+    document.getElementById('eventTime').value = '';
+    document.getElementById('eventLocation').value = '';
+    document.getElementById('eventNote').value = '';
+  }
+
+  // ===== 計算預估運費（仍是簡化示意） =====
+  function calculatePrice() {
+    const base = Number(document.getElementById('billServiceType').value || 0);
+    const dist = Number(document.getElementById('billDistance').value || 0);
+    const weight = Number(document.getElementById('billWeight').value || 0);
+    const volume = Number(document.getElementById('billVolume').value || 0);
+
+    let extra = 0;
+    if (document.getElementById('optDangerous').checked) extra += 80;
+    if (document.getElementById('optFragile').checked) extra += 50;
+    if (document.getElementById('optOversize').checked) extra += 100;
+
+    // 仍用簡化公式，只是 HTML 部分已強調距離 / 體積會參與計費
+    let price = base + dist * 2 + weight * 10 + extra;
+
+    if (volume > 0) {
+      price += Math.round(volume / 10000) * 20;
+    }
+
+    document.getElementById('priceResult').textContent = price.toFixed(0) + ' 元（示意）';
+  }
+</script>
+</body>
+</html>

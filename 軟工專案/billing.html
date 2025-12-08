@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>步驟三：計費與付款</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; background: #f5f7fb; color: #222; }
+    header {
+      background: linear-gradient(120deg, #1f4f96, #2c7adf);
+      color: #fff; padding: 16px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { margin: 0; font-size: 20px; }
+    header small { font-size: 12px; opacity: .8; }
+    nav {
+      display: flex; gap: 8px; padding: 8px 32px;
+      background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    nav a {
+      text-decoration: none; padding: 6px 12px; border-radius: 999px;
+      font-size: 13px; color: #333; background: #eef2f8;
+    }
+    nav a:hover { background: #d9e4ff; }
+    main {
+      padding: 16px 32px 40px; max-width: 1100px; margin: 0 auto;
+    }
+    .section { margin-top: 24px; }
+    .section h2 { font-size: 18px; color: #1f4f96; margin-bottom: 4px; }
+    .section small { font-size: 12px; color: #6b7280; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 16px 20px;
+      margin-top: 12px; box-shadow: 0 2px 5px rgba(15,23,42,.08);
+    }
+    .card h3 { margin-top: 0; margin-bottom: 8px; font-size: 16px; color: #111827; }
+    .muted { color: #6b7280; font-size: 12px; }
+    form {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+      gap: 12px 16px; margin-top: 10px; font-size: 13px;
+    }
+    label { display: flex; flex-direction: column; font-size: 13px; color: #111827; }
+    input, select, textarea {
+      margin-top: 4px; padding: 6px 8px; border-radius: 8px;
+      border: 1px solid #d1d5db; font-size: 13px; resize: vertical;
+    }
+    .full-width { grid-column: 1 / -1; }
+    .btn-row {
+      grid-column: 1 / -1; display: flex; gap: 8px;
+      margin-top: 4px; flex-wrap: wrap;
+    }
+    button {
+      border: none; border-radius: 999px; padding: 6px 14px;
+      font-size: 13px; cursor: pointer;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-outline { background: #fff; color: #2563eb; border: 1px solid #2563eb; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; white-space: nowrap;
+    }
+    th { background: #f3f4f6; }
+    .pill {
+      display: inline-block; padding: 2px 8px; font-size: 11px;
+      background: #e5e7eb; border-radius: 999px; margin-right: 4px; margin-bottom: 4px;
+    }
+    @media (max-width: 640px) {
+      header, nav, main { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>包裹追蹤與計費系統 - 步驟三</h1>
+  <div>
+    <small style="margin-right:8px;">計費與付款（試算運費 / 月結帳單報表）</small>
+    <label style="font-size:12px;">
+      目前角色：
+      <select id="roleSelect" onchange="onRoleChange()" style="padding:4px 8px;border-radius:999px;border:none;">
+        <option value="client">客戶</option>
+        <option value="staff">作業人員</option>
+        <option value="admin">管理員 / 系統管理員</option>
+      </select>
+    </label>
+  </div>
+</header>
+
+
+<nav>
+  <a href="customer.html">步驟一：客戶資料</a>
+  <a href="parcel_tracking.html">步驟二：包裹與追蹤</a>
+  <a href="billing.html">步驟三：計費與帳單</a>
+</nav>
+
+<main>
+  <!-- 客戶摘要 -->
+  <section class="section">
+    <h2>確認客戶基本資料</h2>
+    <small>可用於對應帳單顯示。</small>
+    <div class="card">
+      <div id="customerSummary" class="muted">正在讀取客戶資料…</div>
+      <p style="margin-top:8px;">
+        <a href="customer.html" style="font-size:13px;">⬅ 如需修改，請回步驟一</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- 試算運費 -->
+  <section class="section">
+    <h2>試算運費</h2>
+    <small>對應需求 1.5 第 16 點：服務類型、距離、重量、體積與特殊處理費。</small>
+
+    <div class="card">
+      <h3>試算運費（前端示意）</h3>
+      <p class="muted">
+        實際系統中，金額應由後端計算。這裡只用簡單公式做畫面展示。
+      </p>
+
+      <form>
+        <label>
+          服務類型
+          <select id="billServiceType">
+            <option value="150">隔夜達</option>
+            <option value="120">標準速遞</option>
+            <option value="90">經濟速遞</option>
+          </select>
+        </label>
+
+        <label>
+          距離（km）
+          <input type="number" id="billDistance" step="1" placeholder="例如：30" />
+        </label>
+
+        <label>
+          重量（kg）
+          <input type="number" id="billWeight" step="0.1" placeholder="例如：2.5" />
+        </label>
+
+        <label>
+          體積（立方公分或其他單位）
+          <input type="number" id="billVolume" step="1" placeholder="例如：12000" />
+        </label>
+
+        <label class="full-width">
+          特殊處理
+          <div>
+            <label style="display:inline-flex;align-items:center;margin-right:12px;">
+              <input type="checkbox" id="optDangerous" /> 危險品（示意附加費）
+            </label>
+            <label style="display:inline-flex;align-items:center;margin-right:12px;">
+              <input type="checkbox" id="optFragile" /> 易碎（示意附加費）
+            </label>
+            <label style="display:inline-flex;align-items:center;">
+              <input type="checkbox" id="optOversize" /> 超大件（示意附加費）
+            </label>
+          </div>
+        </label>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary" onclick="calculatePrice()">計算預估運費（示意）</button>
+        </div>
+      </form>
+
+      <p style="margin-top:10px;">
+        預估運費：<strong id="priceResult">尚未計算</strong>
+      </p>
+      <p class="muted">
+        目前使用簡化公式：<br>
+        運費 ≈ 基本價 + 距離 × 2 + 重量 × 10 + 體積附加 + 特殊處理費。<br>
+        可在報告中說明你實際採用的公式與商業邏輯。
+      </p>
+    </div>
+  </section>
+
+  <!-- 月結帳單報表 -->
+  <section class="section">
+    <h2>月結帳單報表</h2>
+    <small>對應需求 1.5 第 18 點：某客戶於某月份的所有貨件與總金額。</small>
+
+    <div class="card">
+      <h3>月結帳單報表（示意）</h3>
+      <p class="muted">
+        前端提供「客戶帳號 + 計費月份」，實際資料應由後端報表 API 回傳。這裡先放示意表格，方便 demo。
+      </p>
+
+      <form>
+        <label>
+          客戶帳號
+          <input type="text" id="reportCustomerId" placeholder="例如：CUST-0001" />
+        </label>
+        <label>
+          計費月份
+          <input type="month" id="reportMonth" />
+        </label>
+
+        <div class="btn-row">
+          <button type="button" class="btn-primary">產生月結報表（示意）</button>
+          <button type="reset" class="btn-outline">清除條件</button>
+        </div>
+      </form>
+
+      <table>
+        <thead>
+        <tr>
+          <th>貨件追蹤編號</th>
+          <th>寄件日期</th>
+          <th>服務類型</th>
+          <th>金額（元）</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>TRK-20251101-101</td>
+          <td>2025-11-01</td>
+          <td>隔夜達</td>
+          <td>180</td>
+        </tr>
+        <tr>
+          <td>TRK-20251105-223</td>
+          <td>2025-11-05</td>
+          <td>標準速遞</td>
+          <td>130</td>
+        </tr>
+        <tr>
+          <td>TRK-20251120-087</td>
+          <td>2025-11-20</td>
+          <td>經濟速遞</td>
+          <td>90</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="text-align:right;"><strong>合計金額</strong></td>
+          <td><strong>400</strong></td>
+        </tr>
+        </tbody>
+        <div class="btn-row" id="exportRow">
+            <button type="button" class="btn-primary" onclick="exportToCsv()">匯出 Excel（CSV）</button>
+        </div>
+
+      </table>
+    </div>
+  </section>
+
+  <!-- 返回按鈕 -->
+  <section class="section">
+    <div class="card">
+      <div class="btn-row">
+        <button class="btn-outline" type="button" onclick="window.location.href='parcel_tracking.html'">⬅ 上一步：包裹與追蹤</button>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn-primary" onclick="exportToCsv()">匯出 Excel（CSV）</button>
+      </div>
+
+    </div>
+
+  </section>
+</main>
+
+<script>
+  // ========== 角色相關：讓匯出按鈕只有 admin 看得到 ==========
+
+  function initRole() {
+    const sel = document.getElementById('roleSelect');
+    if (!sel) return;
+    const saved = localStorage.getItem('currentRole') || 'client';
+    sel.value = saved;
+  }
+
+  function onRoleChange() {
+    const sel = document.getElementById('roleSelect');
+    if (!sel) return;
+    localStorage.setItem('currentRole', sel.value);
+    updateExportVisibility();
+  }
+
+  function updateExportVisibility() {
+    const role = localStorage.getItem('currentRole') || 'client';
+    const row = document.getElementById('exportRow'); // 匯出按鈕那行
+    if (!row) return;
+    row.style.display = (role === 'admin') ? 'flex' : 'none';
+  }
+
+  // ========== 顯示目前這一位客戶（只是畫面用） ==========
+
+  function loadCustomer() {
+    const raw = localStorage.getItem('currentCustomer');
+    const container = document.getElementById('customerSummary');
+
+    if (!raw) {
+      container.innerHTML = '找不到先前填寫的客戶資料，請先回到步驟一填寫。';
+      return;
+    }
+
+    try {
+      const data = JSON.parse(raw);
+      container.innerHTML = `
+        <div><span class="pill">客戶姓名：</span> ${data.name}</div>
+        <div><span class="pill">客戶帳號：</span> ${data.id}</div>
+        <div><span class="pill">聯絡電話：</span> ${data.phone}</div>
+        <div><span class="pill">電子郵件：</span> ${data.email}</div>
+        <div><span class="pill">地址：</span> ${data.address}</div>
+        <div><span class="pill">客戶類型：</span> ${data.type}</div>
+        <div><span class="pill">帳單偏好：</span> ${data.billingPref}</div>
+      `;
+    } catch (e) {
+      container.innerHTML = '客戶資料格式有誤，請回到步驟一重新填寫。';
+    }
+  }
+
+  // ========== 試算運費（跟之前一樣） ==========
+
+  function calculatePrice() {
+    const base   = Number(document.getElementById('billServiceType').value || 0);
+    const dist   = Number(document.getElementById('billDistance').value || 0);
+    const weight = Number(document.getElementById('billWeight').value || 0);
+    const volume = Number(document.getElementById('billVolume').value || 0);
+
+    let extra = 0;
+    if (document.getElementById('optDangerous').checked) extra += 80;
+    if (document.getElementById('optFragile').checked)   extra += 50;
+    if (document.getElementById('optOversize').checked)  extra += 100;
+
+    let price = base + dist * 2 + weight * 10 + extra;
+    if (volume > 0) {
+      price += Math.round(volume / 10000) * 20;
+    }
+
+    document.getElementById('priceResult').textContent = price.toFixed(0) + ' 元（示意）';
+  }
+
+  // ========== 匯出為 CSV（Excel 可直接開） ==========
+
+  function exportToCsv() {
+    const role = localStorage.getItem('currentRole') || 'client';
+    if (role !== 'admin') {
+      alert('只有管理人員 / 系統管理員可以匯出 Excel（CSV）。');
+      return;
+    }
+
+    // ★ 這裡改成「一次匯出多個人」 ★
+    const customers = JSON.parse(localStorage.getItem('customers') || '[]'); // 所有客戶
+    const current   = JSON.parse(localStorage.getItem('currentCustomer') || '{}');
+    const packages  = JSON.parse(localStorage.getItem('packages') || '[]');
+    const events    = JSON.parse(localStorage.getItem('trackingEvents') || '[]');
+
+    // 若 customers 陣列目前是空的，但 currentCustomer 有值，就至少放一筆
+    if (customers.length === 0 && current && current.id) {
+      customers.push(current);
+    }
+
+    let lines = [];
+
+    // ===================== 【客戶基本資料】 =====================
+    lines.push('【客戶基本資料】');
+    // 橫排（第一列是欄位名稱，第二列開始是每個客戶）
+    lines.push('客戶姓名,客戶帳號,聯絡電話,電子郵件,地址,客戶類型,帳單偏好');
+    customers.forEach(c => {
+      lines.push([
+        // 第一欄就直接放「客戶姓名」，跟你截圖一樣是橫向
+        c.name || '',
+        c.id || '',
+        c.phone || '',
+        c.email || '',
+        (c.address || '').replace(/,/g, '，'),
+        c.type || '',
+        c.billingPref || ''
+      ].join(','));
+    });
+
+    lines.push(''); // 空一行分隔
+
+    // ===================== 【包裹資料】 =====================
+    lines.push('【包裹資料】');
+    lines.push('追蹤編號,寄件客戶帳號,收件人姓名,收件人電話,收件地址,包裹類型,重量(kg),尺寸,配送時效,申報價值,內容物描述,危險物品,易碎品,國際貨件');
+
+    packages.forEach(p => {
+      lines.push([
+        p.trackingId || '',
+        p.senderAccount || '',
+        p.receiverName || '',
+        p.receiverPhone || '',
+        (p.receiverAddr || '').replace(/,/g, '，'),
+        p.pkgType || '',
+        p.weight || '',
+        p.size || '',
+        p.deliveryType || '',
+        p.declaredValue || '',
+        (p.desc || '').replace(/,/g, '，'),
+        p.specialFlags && p.specialFlags.dangerous ? '是' : '否',
+        p.specialFlags && p.specialFlags.fragile   ? '是' : '否',
+        p.specialFlags && p.specialFlags.intl      ? '是' : '否'
+      ].join(','));
+    });
+
+    lines.push('');
+
+    // ===================== 【追蹤事件】 =====================
+    lines.push('【追蹤事件】');
+    lines.push('事件時間,事件類型,地點/倉儲,說明');
+
+    events.forEach(e => {
+      lines.push([
+        e.time || '',
+        e.type || '',
+        (e.location || '').replace(/,/g, '，'),
+        (e.note || '').replace(/,/g, '，')
+      ].join(','));
+    });
+
+    lines.push('');
+
+    // ★★ 重點：加 UTF-8 BOM，避免 Excel 中文亂碼 ★★
+    const csvContent = '\uFEFF' + lines.join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shipment_data.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ========== 頁面載入時執行初始化 ==========
+
+  initRole();
+  loadCustomer();
+  updateExportVisibility();
+</script>
+
+
+
+</body>
+</html>
