@@ -1,0 +1,11 @@
+[
+    {
+        "id": "5e44e2a5-b419-4f29-9759-566a678e859b",
+        "customerAccount": "TEST001",
+        "period": "2025-12",
+        "amount": 5000,
+        "method": "月結",
+        "status": "未付款",
+        "created_at": "2025-12-08"
+    }
+]
