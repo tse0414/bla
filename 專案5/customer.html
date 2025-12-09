@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>客戶資料管理</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eff6ff;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 30px auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px 24px 28px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      color: #111827;
+    }
+    .subtitle {
+      margin: 0 0 18px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      margin-left: 4px;
+    }
+    .btn {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: none;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-edit {
+      background: #2563eb;
+      color: #fff;
+    }
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .form-group {
+      flex: 1;
+      min-width: 180px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    input {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    .btn-save {
+      padding: 7px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #16a34a;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .muted {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>
+      客戶資料管理
+      <span id="roleBadge" class="badge"></span>
+    </h1>
+    <p class="subtitle">
+      只有作業人員與管理人員可以查看客戶資料；僅管理人員可修改客戶資料。
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>客戶帳號</th>
+          <th>姓名</th>
+          <th>電話</th>
+          <th>Email</th>
+          <th>地址</th>
+          <th>建立時間</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="customerBody">
+      </tbody>
+    </table>
+
+    <div id="editPanel" style="display:none;">
+      <h3>編輯客戶資料</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="editAccount">客戶帳號（不可修改）</label>
+          <input id="editAccount" readonly>
+        </div>
+        <div class="form-group">
+          <label for="editName">姓名</label>
+          <input id="editName">
+        </div>
+        <div class="form-group">
+          <label for="editPhone">電話</label>
+          <input id="editPhone">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="editEmail">Email</label>
+          <input id="editEmail">
+        </div>
+        <div class="form-group">
+          <label for="editAddress">地址</label>
+          <input id="editAddress">
+        </div>
+      </div>
+      <button class="btn-save" type="button" onclick="saveCustomer()">儲存修改</button>
+      <p class="muted">提示：只有管理人員可以儲存修改，作業人員僅能檢視。</p>
+    </div>
+  </div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000";
+
+  let currentRole = "customer";
+  let customers = [];
+
+  function ensureAuth() {
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入，請先登入");
+      window.location.href = "login.html";
+      return null;
+    }
+    return token;
+  }
+
+  async function initPage() {
+    const token = ensureAuth();
+    if (!token) return;
+
+    currentRole = localStorage.getItem("role") || "customer";
+
+    if (currentRole !== "staff" && currentRole !== "admin") {
+      alert("只有作業人員與管理人員可以查看客戶資料");
+      window.location.href = "parcel_tracking.html";
+      return;
+    }
+
+    document.getElementById("roleBadge").textContent =
+      currentRole === "admin" ? "管理人員" : "作業人員";
+
+    try {
+      const res = await fetch(`${API_BASE}/api/customers`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        alert("載入客戶資料失敗：" + (result.error || res.status));
+        return;
+      }
+
+      customers = result;
+      renderTable();
+    } catch (err) {
+      console.error(err);
+      alert("載入客戶資料時發生錯誤");
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById("customerBody");
+    tbody.innerHTML = "";
+
+    customers.forEach(c => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${c.account || ""}</td>
+        <td>${c.name || ""}</td>
+        <td>${c.phone || ""}</td>
+        <td>${c.email || ""}</td>
+        <td>${c.address || ""}</td>
+        <td>${c.created_at || ""}</td>
+        <td>${currentRole === "admin"
+              ? `<button class="btn btn-edit" type="button" onclick="startEdit('${c.account}')">編輯</button>`
+              : `&mdash;`}
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    if (currentRole !== "admin") {
+      document.getElementById("editPanel").style.display = "none";
+    }
+  }
+
+  function startEdit(account) {
+    const c = customers.find(x => x.account === account);
+    if (!c) return;
+
+    document.getElementById("editAccount").value = c.account || "";
+    document.getElementById("editName").value = c.name || "";
+    document.getElementById("editPhone").value = c.phone || "";
+    document.getElementById("editEmail").value = c.email || "";
+    document.getElementById("editAddress").value = c.address || "";
+
+    document.getElementById("editPanel").style.display = "block";
+  }
+
+  async function saveCustomer() {
+    if (currentRole !== "admin") {
+      alert("只有管理人員可以修改客戶資料");
+      return;
+    }
+
+    const token = ensureAuth();
+    if (!token) return;
+
+    const account = document.getElementById("editAccount").value.trim();
+    const name = document.getElementById("editName").value.trim();
+    const phone = document.getElementById("editPhone").value.trim();
+    const email = document.getElementById("editEmail").value.trim();
+    const address = document.getElementById("editAddress").value.trim();
+
+    if (!account) {
+      alert("缺少客戶帳號");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/customers/${encodeURIComponent(account)}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, phone, email, address }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        alert("更新客戶資料失敗：" + (result.error || res.status));
+        return;
+      }
+
+      alert("客戶資料已更新");
+
+      const idx = customers.findIndex(x => x.account === account);
+      if (idx >= 0) {
+        customers[idx].name = name;
+        customers[idx].phone = phone;
+        customers[idx].email = email;
+        customers[idx].address = address;
+      }
+
+      renderTable();
+    } catch (err) {
+      console.error(err);
+      alert("更新客戶資料時發生錯誤");
+    }
+  }
+
+  window.addEventListener("load", initPage);
+</script>
+</body>
+</html>
