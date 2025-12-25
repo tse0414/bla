@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>進階查詢 - 包裹追蹤</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eff6ff;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 30px auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px 24px 28px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      color: #111827;
+    }
+    .subtitle {
+      margin: 0 0 16px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      margin-left: 6px;
+    }
+    .btn {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-outline {
+      background: #fff;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+    }
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+      flex: 1;
+    }
+    label {
+      margin-bottom: 4px;
+      color: #4b5563;
+    }
+    input {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    .muted {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 6px;
+    }
+    #notLoginBox {
+      padding: 40px 20px;
+      text-align: center;
+      color: #4b5563;
+      font-size: 14px;
+    }
+    #notLoginBox button {
+      margin-top: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <div>
+        登入帳號：<span id="currentUser">(載入中)</span>
+        <span id="currentRole" class="badge"></span>
+      </div>
+      <div>
+        <button class="btn btn-secondary" type="button" onclick="goParcel()">返回儲存包裹</button>
+        <button id="btnDownload" class="btn btn-outline" type="button" onclick="downloadExcel()">
+          下載 Excel
+        </button>
+        <button class="btn btn-secondary" type="button" onclick="logout()">登出</button>
+      </div>
+    </div>
+
+    <h1>進階查詢 - 包裹追蹤</h1>
+    <p class="subtitle">
+      可依追蹤編號、寄件人帳號或日期區間篩選包裹資料
+    </p>
+
+    <!-- 未登入提示 -->
+    <div id="notLoginBox" style="display:none;">
+      您尚未登入，無法查詢包裹資料。<br>
+      請先回登入頁面完成登入後，再重新開啟此頁。
+      <br>
+      <button class="btn btn-secondary" type="button" onclick="goLogin()">前往登入頁</button>
+    </div>
+
+    <!-- 已登入才會顯示下面這一整段（資料抓好之後一次顯示） -->
+    <div id="searchArea" style="display:none;">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="filterTracking">追蹤編號</label>
+          <input id="filterTracking" placeholder="TRK- 開頭的編號" oninput="applyFilter()">
+        </div>
+        <div class="filter-group">
+          <label for="filterSender">寄件人帳號</label>
+          <input id="filterSender" placeholder="例如：test1" oninput="applyFilter()">
+        </div>
+        <div class="filter-group">
+          <label for="filterDateFrom">寄件日期（起）</label>
+          <input id="filterDateFrom" type="date" onchange="applyFilter()">
+        </div>
+        <div class="filter-group">
+          <label for="filterDateTo">寄件日期（迄）</label>
+          <input id="filterDateTo" type="date" onchange="applyFilter()">
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>追蹤編號</th>
+            <th>寄件人帳號</th>
+            <th>收件人姓名</th>
+            <th>重量</th>
+            <th>寄件日期</th>
+            <th>金額</th>
+            <th>狀態</th>
+          </tr>
+        </thead>
+        <tbody id="recordBody">
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000";
+  let allRecords = [];
+  let currentRole = "customer";
+
+  function logout() {
+    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("role");
+    localStorage.removeItem("current_parcel");
+    alert("已登出");
+  }
+
+  function goParcel() {
+    window.location.href = "parcel_tracking.html";
+  }
+
+  function goLogin() {
+    window.location.href = "login.html";
+  }
+
+  async function initPage() {
+    const token = localStorage.getItem("jwt_token");
+    const username = localStorage.getItem("username") || "(未登入)";
+    currentRole = localStorage.getItem("role") || "guest";
+
+    const notLoginBox = document.getElementById("notLoginBox");
+    const searchArea = document.getElementById("searchArea");
+    const btnDownload = document.getElementById("btnDownload");
+
+    document.getElementById("currentUser").textContent = username;
+    document.getElementById("currentRole").textContent =
+      currentRole === "admin" ? "管理人員" :
+      currentRole === "staff" ? "作業人員" :
+      currentRole === "driver" ? "司機" :
+      currentRole === "customer" ? "客戶" : "未登入";
+
+    // 先全部關掉
+    notLoginBox.style.display = "none";
+    searchArea.style.display = "none";
+    btnDownload.style.display = "none";
+
+    // 沒登入：只秀提示，不 redirect
+    if (!token) {
+      notLoginBox.style.display = "block";
+      return;
+    }
+
+    // 有登入：先去抓資料，等抓完再一次顯示 searchArea
+    try {
+      const res = await fetch(`${API_BASE}/records`);
+      const result = await res.json();
+
+      if (!res.ok) {
+        alert("載入包裹資料失敗：" + (result.error || res.status));
+      } else {
+        allRecords = result || [];
+      }
+    } catch (err) {
+      console.error(err);
+      alert("載入包裹資料時發生錯誤");
+    }
+
+    // 抓完資料後，一次顯示查詢區塊並渲染表格
+    searchArea.style.display = "block";
+
+    if (currentRole === "staff" || currentRole === "admin" || currentRole === "driver") {
+      btnDownload.style.display = "inline-block";
+    }
+
+    applyFilter();
+  }
+
+  const STATUS_OPTIONS = [
+    "建立包裹",
+    "已收件",
+    "運送中",
+    "配送中",
+    "已送達",
+    "退回",
+  ];
+
+  function canEditStatus() {
+    // 除了客戶以外的所有角色都可修改（staff / admin / driver）
+    return currentRole !== "customer" && currentRole !== "guest";
+  }
+
+  function escapeHtml(str) {
+    return (str || "").replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function renderStatusCell(tracking, currentStatus) {
+    const safeTracking = encodeURIComponent(tracking);
+    const safeCurrent = (currentStatus || "").trim();
+
+    if (!canEditStatus()) {
+      return `<span>${escapeHtml(safeCurrent || "-")}</span>`;
+    }
+
+    const opts = STATUS_OPTIONS.map(s => {
+      const selected = s === safeCurrent ? "selected" : "";
+      return `<option value="${escapeHtml(s)}" ${selected}>${escapeHtml(s)}</option>`;
+    }).join("");
+
+    // 每列：狀態下拉 + 更新按鈕
+    return `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select id="st_${safeTracking}" style="padding:4px 6px; border-radius:8px; border:1px solid #d1d5db; font-size:13px;">
+          ${opts}
+        </select>
+        <button class="btn btn-secondary" type="button" onclick="updateStatus('${escapeHtml(tracking)}')">更新</button>
+      </div>
+    `;
+  }
+
+  async function updateStatus(tracking) {
+    if (!canEditStatus()) {
+      alert("權限不足：客戶無法修改包裹狀態");
+      return;
+    }
+
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入，請先登入");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const sel = document.getElementById(`st_${encodeURIComponent(tracking)}`);
+    if (!sel) {
+      alert("找不到狀態選單");
+      return;
+    }
+
+    const newStatus = (sel.value || "").trim();
+    if (!newStatus) {
+      alert("請選擇狀態");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/parcels/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tracking_number: tracking, status: newStatus }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        alert("更新狀態失敗：" + (result.error || res.status));
+        return;
+      }
+
+      // 同步更新前端快取
+      const idx = allRecords.findIndex(x => (x.tracking_no || "") === tracking);
+      if (idx >= 0) {
+        allRecords[idx].status = newStatus;
+      }
+
+      alert("狀態已更新：" + newStatus);
+      applyFilter();
+    } catch (err) {
+      console.error(err);
+      alert("更新狀態時發生錯誤");
+    }
+  }
+
+  function applyFilter() {
+    const t = document.getElementById("filterTracking").value.trim().toLowerCase();
+    const s = document.getElementById("filterSender").value.trim().toLowerCase();
+    const dFrom = document.getElementById("filterDateFrom").value;
+    const dTo = document.getElementById("filterDateTo").value;
+
+    const tbody = document.getElementById("recordBody");
+    tbody.innerHTML = "";
+
+    allRecords.forEach(r => {
+      const tracking = (r.tracking_no || "").toString();
+      const sender = (r.sender_id || "").toString();
+      const name = r.receiver_name || "";
+      const weight = r.weight || "";
+      const date = r.date || "";
+      const amount = (r.amount !== null && r.amount !== undefined) ? r.amount : "";
+      const status = (r.status !== null && r.status !== undefined) ? (r.status + "") : "";
+
+      if (t && !tracking.toLowerCase().includes(t)) return;
+      if (s && !sender.toLowerCase().includes(s)) return;
+      if (dFrom && (!date || date < dFrom)) return;
+      if (dTo && (!date || date > dTo)) return;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${tracking}</td>
+        <td>${sender}</td>
+        <td>${name}</td>
+        <td>${weight}</td>
+        <td>${date}</td>
+        <td>${amount}</td>
+        <td>${renderStatusCell(tracking, status)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function downloadExcel() {
+    try {
+      const token = localStorage.getItem("jwt_token");
+      if (!token) {
+        alert("尚未登入，無法下載");
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        let msg = "下載失敗";
+        try {
+          const err = await res.json();
+          msg = err.error || msg;
+        } catch (_) {}
+        alert(msg);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "logistics.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("下載時發生錯誤");
+    }
+  }
+
+  window.addEventListener("load", initPage);
+</script>
+</body>
+</html>

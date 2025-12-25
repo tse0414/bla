@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>儲存包裹資料</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eff6ff;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px 28px 28px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: #111827;
+    }
+    p {
+      margin: 0 0 24px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    input, select {
+      width: 100%;
+      padding: 9px 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+    .btn-row {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      padding: 10px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .btn-save {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-outline {
+      background: #fff;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <div>
+        登入帳號：<span id="currentUser">（載入中）</span>
+        <span id="currentRole" class="badge"></span>
+      </div>
+      <div>
+        <!-- ✅ 只有 staff/admin 會顯示的按鈕 -->
+        <button id="btnManageCustomers"
+                class="btn btn-outline"
+                type="button"
+                onclick="goCustomerPage()">
+          管理客戶資料
+        </button>
+        <button class="btn btn-save" type="button" onclick="logout()">登出</button>
+      </div>
+    </div> <!-- 🔧 補上這個，關閉 top-bar -->
+
+    <h1>儲存包裹資料</h1>
+    <p>
+      請先按「儲存包裹資料」取得追蹤編號，再按「下一步：計費與付款」。
+    </p>
+
+    <label for="sender">寄件人帳號（自動帶入，可修改）</label>
+    <input id="sender" placeholder="登入帳號會自動帶入">
+
+    <label for="receiver">收件人姓名</label>
+    <input id="receiver" placeholder="例如：王小明">
+
+    <label for="receiverAddress">收件地址</label>
+    <input id="receiverAddress" placeholder="例如：高雄市燕巢區...">
+
+    <label for="weight">重量 (kg)</label>
+    <input id="weight" type="number" step="0.1" placeholder="例如：2.5">
+
+    <label for="volume">體積 (cm³)</label>
+    <input id="volume" placeholder="例如：20×20×20 或 8000">
+
+    <label for="serviceType">服務類型</label>
+    <select id="serviceType">
+      <option value="standard">標準速遞</option>
+      <option value="express">快捷</option>
+      <option value="overnight">隔夜達</option>
+    </select>
+
+    <div class="btn-row">
+      <!-- 1. 只儲存，不跳轉 -->
+      <button class="btn btn-save" type="button" onclick="saveParcel()">
+        儲存包裹資料
+      </button>
+
+      <!-- 2. 若有儲存成功才允許跳轉 -->
+      <button class="btn btn-primary" type="button" onclick="goBilling()">
+        下一步：計費與付款
+      </button>
+
+      <!-- 3. 進階查詢 -->
+      <button class="btn btn-outline" type="button" onclick="goSearch()">
+        進階查詢包裹追蹤
+      </button>
+    </div>
+  </div>
+
+<script>
+  const API_URL = "http://127.0.0.1:5000";
+
+  function logout() {
+    localStorage.clear();
+    window.location.href = "login.html";
+  }
+
+  function goCustomerPage() {
+    // 跳到客戶資料維護頁
+    window.location.href = "customer.html";
+  }
+
+  function initParcelPage() {
+    const token = localStorage.getItem("jwt_token");
+    const username = localStorage.getItem("username") || "";
+    const role = localStorage.getItem("role") || "customer";
+
+    if (!token) {
+      alert("尚未登入，請先登入");
+      window.location.href = "login.html";
+      return;
+    }
+
+    // 顯示登入資訊
+    document.getElementById("currentUser").textContent = username || "(未知)";
+    document.getElementById("currentRole").textContent =
+      role === "admin" ? "管理人員" :
+      role === "staff" ? "作業人員" :
+      "客戶";
+
+    // 只有 staff / admin 才看到「管理客戶資料」按鈕
+    const btnManage = document.getElementById("btnManageCustomers");
+    if (btnManage) {
+      if (role === "staff" || role === "admin") {
+        btnManage.style.display = "inline-block";
+      } else {
+        btnManage.style.display = "none";
+      }
+    }
+
+    // 寄件人預設帶入登入帳號
+    const senderInput = document.getElementById("sender");
+    if (senderInput && !senderInput.value) {
+      senderInput.value = username;
+    }
+  }
+
+  /**
+   * 按「儲存包裹資料」
+   * 1. 檢查必填欄位
+   * 2. 呼叫 /api/parcels 建立包裹
+   * 3. 從後端取得追蹤編號，存到 current_parcel
+   * 4. 不跳頁、不清空欄位
+   */
+  async function saveParcel() {
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入，請先登入");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const sender = document.getElementById("sender").value.trim();
+    const receiver = document.getElementById("receiver").value.trim();
+    const receiverAddress = document.getElementById("receiverAddress").value.trim();
+    const weight = document.getElementById("weight").value.trim();
+    const volume = document.getElementById("volume").value.trim();
+    const serviceType = document.getElementById("serviceType").value;
+
+    if (!sender || !receiver) {
+      alert("請至少填寫寄件人與收件人");
+      return;
+    }
+
+    const payload = {
+      sender: sender,
+      receiver: receiver,
+      receiver_address: receiverAddress,
+      weight: weight,
+      volume: volume,
+      service_type: serviceType
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/api/parcels`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      let result = {};
+      try {
+        result = await res.json();
+      } catch (e) {
+        alert("伺服器回應格式錯誤（無法解析 JSON）");
+        console.error(e);
+        return;
+      }
+
+      if (!res.ok) {
+        alert("建立包裹失敗：" + (result.error || `HTTP ${res.status}`));
+        console.error("Create parcel error:", result);
+        return;
+      }
+
+      // 後端可能回傳的位置：tracking_no 或 package.tracking_number
+      const tracking =
+        result.tracking_no ||
+        (result.package && result.package.tracking_number) ||
+        result.tracking_number ||
+        "(無追蹤編號)";
+
+      alert(`包裹已儲存！追蹤編號：${tracking}`);
+
+      // 存成 current_parcel，給 billing.html 使用
+      const frontParcel = {
+        tracking_number: tracking,
+        sender_id: sender,
+        receiver_name: receiver,
+        receiver_address: receiverAddress,
+        weight: weight,
+        volume: volume
+      };
+      localStorage.setItem("current_parcel", JSON.stringify(frontParcel));
+
+      // 不清空欄位，停留在同一頁
+
+    } catch (err) {
+      console.error(err);
+      alert("連線後端失敗，請確認伺服器是否有啟動");
+    }
+  }
+
+  /**
+   * 按「下一步：計費與付款」
+   * 只有在 current_parcel 已經存在時才允許跳轉
+   */
+  function goBilling() {
+    const raw = localStorage.getItem("current_parcel");
+    if (!raw) {
+      alert("請先按「儲存包裹資料」完成儲存，取得追蹤編號後再進行下一步計費與付款。");
+      return;
+    }
+    window.location.href = "billing.html";
+  }
+
+  function goSearch() {
+    window.location.href = "search.html";
+  }
+
+  window.addEventListener("load", initParcelPage);
+</script>
+
+</body>
+</html>

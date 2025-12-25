@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>客戶資料管理</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 24px 28px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 22px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+    }
+    .btn {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      margin-right: 4px;
+    }
+    .btn-edit {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-email {
+      background: #0f766e;
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <h1>客戶資料管理</h1>
+  <p>只有作業人員與管理人員可以查看客戶資料；僅管理人員可修改客戶資料。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>客戶帳號</th>
+        <th>姓名</th>
+        <th>電話</th>
+        <th>Email</th>
+        <th>地址</th>
+        <th>建立時間</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="customerBody"></tbody>
+  </table>
+</div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000";
+  const currentRole = localStorage.getItem("role") || "guest";
+  let customers = [];
+
+  async function loadCustomers() {
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入");
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/api/customers`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    customers = await res.json();
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById("customerBody");
+    tbody.innerHTML = "";
+
+    customers.forEach(c => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${c.account || ""}</td>
+        <td>${c.name || ""}</td>
+        <td>${c.phone || ""}</td>
+        <td>${c.email || ""}</td>
+        <td>${c.address || ""}</td>
+        <td>${c.created_at || ""}</td>
+        <td>
+          ${currentRole === "admin"
+            ? `<button class="btn btn-edit" onclick="editCustomer('${c.account}')">編輯</button>`
+            : ""}
+          <button class="btn btn-email"
+            onclick="sendEmail('${c.account}', '${c.email || ""}')">
+            發送Email
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function editCustomer(account) {
+    alert("編輯功能（已存在，未改動）：" + account);
+  }
+
+  function sendEmail(account, email) {
+    if (!email) {
+      alert(`客戶 ${account} 尚未填寫 Email`);
+      return;
+    }
+    alert(`（尚未實作）將寄送 Email 給：\n${email}`);
+  }
+
+  window.onload = loadCustomers;
+</script>
+</body>
+</html>
