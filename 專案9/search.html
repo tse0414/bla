@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>進階查詢 - 包裹追蹤</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eff6ff;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 30px auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px 24px 28px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      color: #111827;
+    }
+    .subtitle {
+      margin: 0 0 16px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      margin-left: 6px;
+    }
+    .btn {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-outline {
+      background: #fff;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 12px;
+      background: #10b981;
+      color: #fff;
+    }
+    .btn-danger {
+      padding: 4px 10px;
+      font-size: 12px;
+      background: #ef4444;
+      color: #fff;
+      margin-left: 4px;
+    }
+    
+    .main-search-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end; 
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      background: #f9fafb;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 140px;
+      flex: 1;
+    }
+    label {
+      margin-bottom: 4px;
+      color: #4b5563;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    input {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    
+    /* 讓被禁用的選項顯示為灰色 */
+    option:disabled {
+        color: #d1d5db; /* 淺灰色 */
+        background-color: #f3f4f6;
+    }
+
+    #notLoginBox {
+      padding: 40px 20px;
+      text-align: center;
+      color: #4b5563;
+      font-size: 14px;
+    }
+    #notLoginBox button {
+      margin-top: 12px;
+    }
+    
+    /* 歷史彈窗樣式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background: #fff;
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 80%;
+      max-width: 800px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .close {
+      font-size: 28px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+    }
+    .close:hover {
+      color: #000;
+    }
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+    }
+    .timeline-item {
+      position: relative;
+      padding-bottom: 20px;
+      border-left: 2px solid #e5e7eb;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 0;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2563eb;
+    }
+    .timeline-content {
+      padding-left: 20px;
+    }
+    .timeline-time {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .timeline-status {
+      font-weight: bold;
+      color: #111827;
+    }
+    .timeline-desc {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <div>
+        登入帳號:<span id="currentUser">(載入中)</span>
+        <span id="currentRole" class="badge"></span>
+      </div>
+      <div>
+        <button class="btn btn-secondary" type="button" onclick="goParcel()">返回儲存包裹</button>
+        <button id="btnDownload" class="btn btn-outline" type="button" onclick="downloadExcel()">
+          下載 Excel
+        </button>
+        <button class="btn btn-secondary" type="button" onclick="logout()">登出</button>
+      </div>
+    </div>
+
+    <h1>進階查詢 - 包裹追蹤</h1>
+    <p class="subtitle">
+      可依追蹤編號、寄件人帳號或日期區間篩選包裹資料
+    </p>
+
+    <div id="notLoginBox" style="display:none;">
+      您尚未登入,無法查詢包裹資料。<br>
+      請先回登入頁面完成登入後,再重新開啟此頁。
+      <br>
+      <button class="btn btn-secondary" type="button" onclick="goLogin()">前往登入頁</button>
+    </div>
+
+    <div id="searchArea" style="display:none;">
+      
+      <div class="main-search-row">
+        <div class="filter-group" style="flex: 2;">
+          <label for="filterTracking" style="font-size: 14px; color: #111827;">🔍 快速搜尋：追蹤編號</label>
+          <input id="filterTracking" placeholder="輸入 TRK- 開頭的編號" oninput="applyFilter(false)" style="padding: 10px;">
+        </div>
+        <button class="btn btn-primary" style="height: 38px; padding: 0 30px;" onclick="applyFilter(true)">搜尋</button>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="filterSender">寄件人帳號</label>
+          <input id="filterSender" placeholder="例如:test1" oninput="applyFilter(false)">
+        </div>
+
+        <div class="filter-group">
+          <label for="filterVehicle">運輸載具 ID</label>
+          <input id="filterVehicle" placeholder="例如: TRUCK-01">
+        </div>
+        <div class="filter-group">
+          <label for="filterWarehouse">倉儲地點 ID</label>
+          <input id="filterWarehouse" placeholder="例如: WH-KS">
+        </div>
+
+        <div class="filter-group">
+          <label for="filterDateFrom">寄件日期(起)</label>
+          <input id="filterDateFrom" type="date" onchange="applyFilter(false)">
+        </div>
+        <div class="filter-group">
+          <label for="filterDateTo">寄件日期(迄)</label>
+          <input id="filterDateTo" type="date" onchange="applyFilter(false)">
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>追蹤編號</th>
+            <th>寄件人帳號</th>
+            <th>收件人姓名</th>
+            <th>重量</th>
+            <th>包裹類型</th>
+            <th>寄件日期</th>
+            <th>金額</th>
+            <th>狀態</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="recordBody">
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">物流歷史</h2>
+        <span class="close" onclick="closeModal()">&times;</span>
+      </div>
+      <div id="historyContent" class="timeline">
+        </div>
+    </div>
+  </div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000";
+  let allRecords = [];
+  let currentRole = "customer";
+
+  function logout() {
+    localStorage.clear();
+    alert("已登出");
+    window.location.href = "login.html";
+  }
+
+  function goParcel() {
+    window.location.href = "parcel_tracking.html";
+  }
+
+  function goLogin() {
+    window.location.href = "login.html";
+  }
+
+  async function initPage() {
+    const token = localStorage.getItem("jwt_token");
+    const username = localStorage.getItem("username") || "(未登入)";
+    currentRole = localStorage.getItem("role") || "guest";
+
+    const notLoginBox = document.getElementById("notLoginBox");
+    const searchArea = document.getElementById("searchArea");
+    const btnDownload = document.getElementById("btnDownload");
+
+    document.getElementById("currentUser").textContent = username;
+    document.getElementById("currentRole").textContent =
+      currentRole === "admin" ? "管理人員" :
+      currentRole === "staff" ? "作業人員" :
+      currentRole === "driver" ? "駕駛員" :
+      currentRole === "warehouse" ? "倉儲人員" :
+      currentRole === "customer" ? "客戶" : "未登入";
+
+    notLoginBox.style.display = "none";
+    searchArea.style.display = "none";
+    btnDownload.style.display = "none";
+
+    if (!token) {
+      notLoginBox.style.display = "block";
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/records`,{
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        }
+      });
+      const result = await res.json();
+     
+      if (!res.ok) {
+        if (res.status === 401) {
+            alert("登入已過期,請重新登入");
+            logout();
+            return;
+        }
+        alert("載入包裹資料失敗:" + (result.error || res.status));
+      } else {
+        allRecords = result || [];
+      }
+    } catch (err) {
+      console.error(err);
+      alert("載入包裹資料時發生錯誤");
+    }
+
+    searchArea.style.display = "block";
+
+    if (["staff", "admin", "driver", "warehouse"].includes(currentRole)) {
+      btnDownload.style.display = "inline-block";
+    }
+
+    applyFilter(false);
+  }
+
+  // ✅ 1. 定義標準順序流程 (嚴格順序)
+  const NORMAL_FLOW = [
+      "建立包裹",
+      "已收件",
+      "進入倉儲",
+      "已裝車",
+      "配送中",
+      "已送達",
+      "已簽收"
+  ];
+
+  const ABNORMAL_STATUSES = [
+      "延誤", "遺失", "損毀", "退回"
+  ];
+
+  // 選單顯示用的完整列表
+  const STATUS_OPTIONS = [
+    ...NORMAL_FLOW,
+    "---異常狀態---",
+    ...ABNORMAL_STATUSES
+  ];
+
+  // 排序權重 (數字小排上面)
+  const STATUS_ORDER = {};
+  NORMAL_FLOW.forEach((s, i) => { STATUS_ORDER[s] = i + 1; });
+  ABNORMAL_STATUSES.forEach((s, i) => { STATUS_ORDER[s] = 90 + i; });
+
+  // ✅ 2. 角色權限表
+  const ROLE_STATUS_MAP = {
+      "driver": ["已裝車", "配送中", "已送達", "已簽收", ...ABNORMAL_STATUSES],
+      "warehouse": ["已收件", "進入倉儲", "已裝車", "退回", ...ABNORMAL_STATUSES],
+      "staff": null, // null 代表全部
+      "admin": null
+  };
+
+  function canEditStatus() {
+    return currentRole !== "customer" && currentRole !== "guest";
+  }
+
+  function escapeHtml(str) {
+    return (str || "").replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // ✅ 修改點：渲染狀態欄位 (包含管理員全開權限邏輯)
+  function renderStatusCell(tracking, currentStatus) {
+    const safeTracking = encodeURIComponent(tracking);
+    const safeCurrent = (currentStatus || "").trim();
+    const isAdmin = currentRole === "admin"; // 判斷是否為管理員
+
+    // 如果是客戶，只能看文字
+    if (!canEditStatus()) {
+      return `<span>${escapeHtml(safeCurrent || "-")}</span>`;
+    }
+
+    // 取得該角色「允許選取」的狀態列表
+    const roleAllowed = ROLE_STATUS_MAP[currentRole];
+    
+    // 異常狀態鎖定邏輯
+    const isCurrentAbnormal = ABNORMAL_STATUSES.includes(safeCurrent);
+    
+    // ✅ 修改：只有當「不是管理員」且「目前是異常狀態」時，才鎖住整個選單
+    // 管理員 (isAdmin) 永遠不會被 locked
+    const isLocked = !isAdmin && isCurrentAbnormal;
+    const disabledAttr = isLocked ? "disabled" : "";
+
+    // ✅ 修改：計算順序邏輯 (僅供非管理員參考)
+    let sequenceAllowed = [];
+    
+    if (NORMAL_FLOW.includes(safeCurrent)) {
+        // 如果目前是正常流程
+        const idx = NORMAL_FLOW.indexOf(safeCurrent);
+        
+        // 1. 允許停留在當前狀態
+        sequenceAllowed.push(safeCurrent);
+        
+        // 2. 允許前進到下一格
+        if (idx < NORMAL_FLOW.length - 1) {
+            sequenceAllowed.push(NORMAL_FLOW[idx + 1]);
+        }
+        
+        // 3. 允許跳出到任何異常狀態
+        sequenceAllowed.push(...ABNORMAL_STATUSES);
+        
+    } else {
+        // 如果目前不在正常流程，為了避免卡死，允許選取所有狀態
+        sequenceAllowed = [...NORMAL_FLOW, ...ABNORMAL_STATUSES];
+    }
+
+    const opts = STATUS_OPTIONS.map(s => {
+      // 處理分隔線
+      if (s.includes("---")) {
+          return `<option disabled>${s}</option>`;
+      }
+
+      const selected = s === safeCurrent ? "selected" : "";
+      
+      // 判斷是否禁用 (Disabled)
+      let isRoleForbidden = false;
+      // ✅ 修改：管理員無視角色權限表
+      if (!isAdmin && roleAllowed && !roleAllowed.includes(s)) {
+          isRoleForbidden = true;
+      }
+      
+      let isSequenceForbidden = false;
+      // ✅ 修改：管理員無視順序邏輯，其他狀態全開
+      if (!isAdmin) {
+          if (!sequenceAllowed.includes(s) && s !== safeCurrent) {
+              isSequenceForbidden = true;
+          }
+      }
+
+      // 綜合判斷：只要違反任一條件，就變灰色 (disabled)
+      const isDisabled = isRoleForbidden || isSequenceForbidden;
+      const disabledStr = isDisabled ? "disabled" : "";
+      
+      return `<option value="${escapeHtml(s)}" ${selected} ${disabledStr}>${escapeHtml(s)}</option>`;
+    }).join("");
+
+    return `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select id="st_${safeTracking}" ${disabledAttr} style="padding:4px 6px; border-radius:8px; border:1px solid #d1d5db; font-size:13px;">
+          ${opts}
+        </select>
+        <button class="btn btn-secondary" ${disabledAttr} type="button" onclick="updateStatus('${escapeHtml(tracking)}')">更新</button>
+      </div>
+    `;
+  }
+
+  // ✅ 修改點：更新狀態 (包含即時刷新 UI)
+  async function updateStatus(tracking) {
+    if (!canEditStatus()) {
+      alert("權限不足:客戶無法修改包裹狀態");
+      return;
+    }
+
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入");
+      return;
+    }
+
+    const sel = document.getElementById(`st_${encodeURIComponent(tracking)}`);
+    if (!sel) return;
+
+    const newStatus = (sel.value || "").trim();
+    if (!newStatus || newStatus.includes("---")) {
+      alert("請選擇有效狀態");
+      return;
+    }
+
+    const location = prompt(`正在更新單號 ${tracking} 為 '${newStatus}'\n請輸入目前地點 (必填):`, "轉運中心");
+    if (location === null) return; 
+
+    let vehicleId = "";
+    if (newStatus.includes("裝車") || newStatus.includes("配送")) {
+        vehicleId = prompt("請輸入運輸載具 ID (例如: TRUCK-01):", "") || "";
+    }
+
+    let warehouseId = "";
+    if (newStatus.includes("倉儲") || newStatus.includes("收件")) {
+        warehouseId = prompt("請輸入倉儲 ID (例如: WH-01):", "") || "";
+    }
+
+    const description = prompt("備註 (選填):", "") || "";
+
+    try {
+      const res = await fetch(`${API_BASE}/api/parcels/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          tracking_number: tracking, 
+          status: newStatus,
+          location: location,
+          vehicle_id: vehicleId,
+          warehouse_id: warehouseId,
+          description: description
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        alert("更新狀態失敗:" + (result.error || res.status));
+        return;
+      }
+
+      alert("狀態更新成功！");
+      
+      // ✅ 重點修改：即時更新本地資料，不用刷新頁面
+      const targetRecord = allRecords.find(r => r.tracking_no === tracking);
+      if (targetRecord) {
+          targetRecord.status = newStatus;
+      }
+      // 重新渲染表格
+      applyFilter(false);
+
+    } catch (err) {
+      console.error(err);
+      alert("更新狀態時發生錯誤");
+    }
+  }
+
+  function sortRecords(records) {
+    return records.sort((a, b) => {
+        const statusA = a.status || "";
+        const statusB = b.status || "";
+        
+        const weightA = STATUS_ORDER[statusA] || 50;
+        const weightB = STATUS_ORDER[statusB] || 50;
+
+        if (weightA !== weightB) {
+            return weightA - weightB; 
+        }
+        
+        if (a.tracking_no > b.tracking_no) return -1;
+        if (a.tracking_no < b.tracking_no) return 1;
+        return 0;
+    });
+  }
+
+  async function applyFilter(forceBackend = false) {
+    const t = document.getElementById("filterTracking").value.trim().toLowerCase();
+    const s = document.getElementById("filterSender").value.trim().toLowerCase();
+    const dFrom = document.getElementById("filterDateFrom").value;
+    const dTo = document.getElementById("filterDateTo").value;
+    
+    const v = document.getElementById("filterVehicle").value.trim();
+    const w = document.getElementById("filterWarehouse").value.trim();
+
+    if (forceBackend || v || w) {
+        const token = localStorage.getItem("jwt_token");
+        const params = new URLSearchParams();
+        if (v) params.append("vehicle_id", v);
+        if (w) params.append("warehouse_id", w);
+
+        try {
+            const res = await fetch(`${API_BASE}/records?${params.toString()}`, {
+                method: "GET",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}` 
+                }
+            });
+            if (res.ok) {
+                allRecords = await res.json();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    
+    const sortedRecords = sortRecords([...allRecords]); 
+
+    const tbody = document.getElementById("recordBody");
+    tbody.innerHTML = "";
+
+    sortedRecords.forEach(r => {
+      const tracking = (r.tracking_no || "").toString();
+      const sender = (r.sender_id || "").toString();
+      const name = r.receiver_name || "";
+      const weight = r.weight || "";
+      const packageType = r.package_type || "";
+      const date = r.date || "";
+      const amount = (r.amount !== null && r.amount !== undefined) ? r.amount : "";
+      const status = (r.status !== null && r.status !== undefined) ? (r.status + "") : "";
+
+      if (t && !tracking.toLowerCase().includes(t)) return;
+      if (s && !sender.toLowerCase().includes(s)) return;
+      if (dFrom && (!date || date < dFrom)) return;
+      if (dTo && (!date || date > dTo)) return;
+
+      const deleteBtn = (currentRole === "admin" || currentRole === "staff") 
+        ? `<button class="btn btn-danger" onclick="deleteParcel('${tracking}')">刪除</button>` 
+        : "";
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${tracking}</td>
+        <td>${sender}</td>
+        <td>${name}</td>
+        <td>${weight}</td>
+        <td>${packageType}</td>
+        <td>${date}</td>
+        <td>${amount}</td>
+        <td>${renderStatusCell(tracking, status)}</td>
+        <td>
+          <button class="btn btn-small" onclick="viewHistory('${tracking}')">查看歷史</button>
+          ${deleteBtn}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function deleteParcel(tracking) {
+    if(!confirm(`確定要刪除包裹 ${tracking} 嗎？此動作無法復原。`)) return;
+    
+    const token = localStorage.getItem("jwt_token");
+    try {
+        const res = await fetch(`${API_BASE}/api/parcels/${tracking}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if(res.ok) {
+            alert("刪除成功");
+            allRecords = allRecords.filter(p => p.tracking_no !== tracking);
+            applyFilter(false); 
+        } else {
+            const data = await res.json();
+            alert("刪除失敗: " + (data.error || res.status));
+        }
+    } catch(e) {
+        console.error(e);
+        alert("刪除時發生錯誤");
+    }
+  }
+
+  async function viewHistory(trackingNo) {
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/parcels/${trackingNo}/history`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        alert("查詢歷史失敗:" + (result.error || res.status));
+        return;
+      }
+
+      showHistoryModal(trackingNo, result.events || []);
+
+    } catch (err) {
+      console.error(err);
+      alert("查詢歷史時發生錯誤");
+    }
+  }
+
+  function showHistoryModal(trackingNo, events) {
+    document.getElementById("modalTitle").textContent = `物流歷史 - ${trackingNo}`;
+    
+    const content = document.getElementById("historyContent");
+    content.innerHTML = "";
+
+    if (events.length === 0) {
+      content.innerHTML = "<p style='color:#9ca3af;'>目前無物流事件紀錄</p>";
+    } else {
+      events.forEach(e => {
+        let descHtml = "";
+        
+        if (currentRole === "customer") {
+            descHtml = `
+              ${e.location ? `地點: ${e.location}<br>` : ""}
+              ${e.description ? `備註: ${e.description}` : ""}
+            `;
+        } else {
+            descHtml = `
+              ${e.location ? `地點: ${e.location}<br>` : ""}
+              ${e.vehicle_id ? `車輛: ${e.vehicle_id}<br>` : ""}
+              ${e.warehouse_id ? `倉儲: ${e.warehouse_id}<br>` : ""}
+              ${e.operator ? `操作人員: ${e.operator}<br>` : ""}
+              ${e.description ? `備註: ${e.description}` : ""}
+            `;
+        }
+
+        const item = document.createElement("div");
+        item.className = "timeline-item";
+        item.innerHTML = `
+          <div class="timeline-content">
+            <div class="timeline-time">${e.timestamp || ""}</div>
+            <div class="timeline-status">${e.event_type || ""}</div>
+            <div class="timeline-desc">
+              ${descHtml}
+            </div>
+          </div>
+        `;
+        content.appendChild(item);
+      });
+    }
+
+    document.getElementById("historyModal").style.display = "block";
+  }
+
+  function closeModal() {
+    document.getElementById("historyModal").style.display = "none";
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById("historyModal");
+    if (event.target == modal) {
+      modal.style.display = "none";
+    }
+  }
+
+  async function downloadExcel() {
+    try {
+      const token = localStorage.getItem("jwt_token");
+      if (!token) {
+        alert("尚未登入");
+        return;
+      }
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        alert("下載失敗");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "logistics.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("下載錯誤");
+    }
+  }
+
+  window.addEventListener("load", initPage);
+</script>
+</body>
+</html>
