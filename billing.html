@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>計費與付款</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eff6ff;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px 28px 28px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: #111827;
+    }
+    p {
+      margin: 0 0 16px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .summary-card {
+      border-radius: 12px;
+      padding: 16px 18px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #374151;
+    }
+    .summary-card div { margin: 4px 0; }
+    .summary-card span.label {
+      display: inline-block;
+      width: 110px;
+      color: #6b7280;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    input, select {
+      width: 100%;
+      padding: 9px 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+    .credit-card-box {
+      display: none; /* 預設隱藏 */
+      background: #f0fdf4;
+      padding: 15px;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .btn-row {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      padding: 10px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: #111827; }
+    .btn-outline { background: #fff; color: #2563eb; border: 1px solid #2563eb; }
+    .fee-box { font-size: 16px; margin-top: 8px; font-weight: bold; color: #111827; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>計費與付款</h1>
+
+    <div class="summary-card">
+      <div><span class="label">追蹤編號：</span><span id="sTracking">-</span></div>
+      <div><span class="label">寄件人：</span><span id="sSender">-</span></div>
+      <div><span class="label">收件人：</span><span id="sReceiver">-</span></div>
+      <div><span class="label">重量 (kg)：</span><span id="sWeight">-</span></div>
+      <div><span class="label">體積：</span><span id="sVolume">-</span></div>
+    </div>
+
+    <label for="serviceType">服務類型</label>
+    <select id="serviceType">
+      <option value="standard">標準速遞</option>
+      <option value="economic">經濟速遞 (優惠)</option>
+      <option value="twoday_delivery">兩日達 (+40元)</option>
+      <option value="overnight">隔夜達 (+80元)</option>
+    </select>
+
+    <label for="distance">運送距離（公里）</label>
+    <input id="distance" type="number" step="1" placeholder="例如：20">
+
+    <label>特殊處理</label>
+    <div style="margin-bottom: 16px;">
+      <label><input type="checkbox" id="chkDangerous"> 危險物品 (+100元)</label><br>
+      <label><input type="checkbox" id="chkFragile"> 易碎品 (+50元)</label><br>
+      <label><input type="checkbox" id="chkOversize"> 超大件 (+80元)</label>
+    </div>
+
+    <label for="payMethod">付款方式</label>
+    <select id="payMethod" onchange="toggleCreditCard()">
+      <option value="cash">現金 / 貨到付款</option>
+      <option value="card">信用卡 (線上支付)</option>
+      <option value="monthly">月結</option>
+      <option value="prepaid">預付貨件</option>
+    </select>
+
+    <div id="ccBox" class="credit-card-box">
+        <label>卡號</label>
+        <input type="text" placeholder="0000 0000 0000 0000" maxlength="19">
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+                <label>有效期限</label>
+                <input type="text" placeholder="MM/YY" maxlength="5">
+            </div>
+            <div style="flex:1;">
+                <label>CVC</label>
+                <input type="text" placeholder="123" maxlength="3">
+            </div>
+        </div>
+    </div>
+
+    <div class="fee-box">試算金額：<span id="fee">尚未計算</span></div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" type="button" onclick="calculateFee(true)">試算金額</button>
+      <button class="btn btn-secondary" type="button" onclick="confirmPay()">確認付款</button>
+      <button class="btn btn-secondary" type="button" onclick="backToParcel()">返回儲存包裹</button>
+      <button id="btnDownloadExcel" class="btn btn-outline" type="button" onclick="downloadExcel()">
+       下載 Excel
+      </button>
+    </div>
+  </div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000";
+
+  let currentParcel = null;
+  let currentRole = "customer";
+
+  function initBilling() {
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入，請先登入");
+      window.location.href = "login.html";
+      return;
+    }
+
+    currentRole = localStorage.getItem("role") || "customer";
+
+    const raw = localStorage.getItem("current_parcel");
+    if (!raw) {
+      alert("查無包裹資料，請先返回上一頁建立包裹");
+      window.location.href = "parcel_tracking.html";
+      return;
+    }
+
+    try {
+      currentParcel = JSON.parse(raw);
+    } catch (e) {
+      console.error(e);
+      alert("讀取包裹資料錯誤");
+      window.location.href = "parcel_tracking.html";
+      return;
+    }
+
+    document.getElementById("sTracking").textContent =
+      currentParcel.tracking_no || currentParcel.tracking_number || "(尚未指定)";
+    document.getElementById("sSender").textContent = currentParcel.sender_id || "-";
+    document.getElementById("sReceiver").textContent = currentParcel.receiver_name || "-";
+    document.getElementById("sWeight").textContent = currentParcel.weight || "-";
+    document.getElementById("sVolume").textContent = currentParcel.volume || "-";
+
+    // ✅ 自動選擇上一頁設定的服務類型 (如果有的話)
+    if (currentParcel.service_type) {
+        // 對應上一頁的 value: standard, economic, twoday_delivery, overnight
+        // 如果 HTML select 裡沒有對應 value，它會保持預設
+        const sSelect = document.getElementById("serviceType");
+        if(sSelect.querySelector(`option[value="${currentParcel.service_type}"]`)){
+            sSelect.value = currentParcel.service_type;
+        }
+    }
+
+    // 非客戶（staff/admin/driver）可見下載按鈕
+    const btnDownload = document.getElementById("btnDownloadExcel");
+    if (btnDownload) {
+      if (currentRole === "staff" || currentRole === "admin" || currentRole === "driver") {
+        btnDownload.style.display = "inline-block";
+      } else {
+        btnDownload.style.display = "none";
+      }
+    }
+  }
+
+  function toggleCreditCard() {
+    const method = document.getElementById("payMethod").value;
+    const box = document.getElementById("ccBox");
+    if (method === "card") {
+      box.style.display = "block";
+    } else {
+      box.style.display = "none";
+    }
+  }
+
+  function calculateFee(showAlert) {
+    if (!currentParcel) {
+      alert("尚未載入包裹資料");
+      return 0;
+    }
+
+    const weight = parseFloat(currentParcel.weight || "0") || 0;
+    const distance = parseFloat(document.getElementById("distance").value || "0");
+
+    // 負數檢查
+    if (weight < 0 || distance < 0) {
+        alert("錯誤：重量與距離不可為負數！");
+        return 0;
+    }
+
+    const serviceType = document.getElementById("serviceType").value;
+    const dangerous = document.getElementById("chkDangerous").checked;
+    const fragile = document.getElementById("chkFragile").checked;
+    const oversize = document.getElementById("chkOversize").checked;
+
+    // ✅ 修改：更新後的計費邏輯
+    let base = 60; // 標準預設
+    
+    if (serviceType === "economic") {
+        base = 50; // 經濟比較便宜
+    } else if (serviceType === "twoday_delivery") {
+        base = 100; // 兩日達 (60+40)
+    } else if (serviceType === "overnight") {
+        base = 140; // 隔夜達 (60+80)
+    }
+
+    base += weight * 10;
+    base += distance * 2;
+
+    if (dangerous) base += 100;
+    if (fragile) base += 50;
+    if (oversize) base += 80;
+
+    const fee = Math.round(base);
+    const feeText = `${fee} 元`;
+    document.getElementById("fee").textContent = feeText;
+
+    if (showAlert) alert("試算金額：" + feeText);
+    return fee;
+  }
+
+  async function confirmPay() {
+    const amount = calculateFee(false);
+    if (amount <= 0 && document.getElementById("distance").value) { 
+        return; 
+    }
+    if (amount === 0) {
+        alert("請輸入距離以計算運費");
+        return;
+    }
+
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入，請先登入");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const tracking = (currentParcel && (currentParcel.tracking_no || currentParcel.tracking_number)) || "";
+    if (!tracking) {
+      alert("找不到追蹤編號，無法寫入金額");
+      return;
+    }
+
+    // 檢查信用卡欄位
+    const payMethod = document.getElementById("payMethod").value;
+    if (payMethod === 'card') {
+        const ccInputs = document.querySelectorAll('#ccBox input');
+        let allFilled = true;
+        ccInputs.forEach(input => {
+            if(!input.value) allFilled = false;
+        });
+        if(!allFilled) {
+            alert("請輸入完整信用卡資訊");
+            return;
+        }
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/parcels/amount`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+            tracking_number: tracking, 
+            amount: amount,
+            payment_method: payMethod
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        alert("寫入金額失敗：" + (result.error || res.status));
+        return;
+      }
+      
+      alert(`付款處理完成！\n金額：${amount} 元\n狀態：${result.payment_status || '已更新'}`);
+      
+    } catch (err) {
+      console.error(err);
+      alert("寫入金額時發生錯誤");
+    }
+  }
+
+  function backToParcel() {
+    window.location.href = "parcel_tracking.html";
+  }
+
+  async function downloadExcel() {
+    try {
+      const token = localStorage.getItem("jwt_token");
+      if (!token) {
+        alert("尚未登入，無法下載");
+        window.location.href = "login.html";
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        let msg = "下載失敗";
+        try {
+          const err = await res.json();
+          msg = err.error || msg;
+        } catch (_) {}
+        alert(msg);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "logistics.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("下載時發生錯誤");
+    }
+  }
+
+  window.addEventListener("load", initBilling);
+</script>
+</body>
+</html>
