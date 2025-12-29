@@ -1,0 +1,165 @@
+@startuml
+
+' --- 全域樣式設定 (保留你喜歡的風格) ---
+skinparam classAttributeIconSize 0
+skinparam linetype ortho 
+skinparam nodesep 100
+skinparam ranksep 80
+skinparam handwritten false
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+' --- 1. 權限與帳戶類 (Authentication - 對應 app.py 的登入邏輯) ---
+package "權限與帳戶 (Authentication)" {
+    class Account as "Account\n(帳戶實體)" {
+        - username (帳號) : String
+        - password (密碼) : String
+        - role (角色) : String
+        + login() (登入驗證) : String
+        + edit_customer() (編輯客戶) : void
+        + list_records() (進階查詢) : void
+        + download_excel() (Excel 下載) : File
+
+    }
+
+    enum UserRole as "UserRole\n(使用者角色)" {
+        CUSTOMER (客戶)
+        ADMIN (管理員)
+        STAFF (員工)
+        DRIVER (駕駛員)
+        WAREHOUSE (倉儲人員)
+    }
+}
+
+' --- 2. 客戶管理類 (Customer - 對應 Excel Customers 表) ---
+package "客戶管理 (Customer Management)" {
+    class Customer as "Customer\n(客戶資料)" {
+        - account (客戶帳號) : String
+        - name (姓名) : String
+        - address (地址) : String
+        - phone (電話) : String
+        - email (Email) : String
+        - customer_type (客戶類型) : String
+        - billing_preference (帳單偏好) : String
+        + register_customer_account() (客戶註冊) : void
+        + create_customer() (建立客戶) : void
+    }
+    
+    enum CustomerType as "CustomerType\n(客戶類型)" {
+        CONTRACT (合約客戶)
+        NON_CONTRACT (非合約客戶)
+        PREPAID(預付客戶)
+    }
+}
+
+' --- 3. 包裹與計費核心 (Core Business) ---
+package "包裹與計費核心 (Parcel & Billing)" {
+    class Parcel as "Parcel\n(包裹實體)" {
+        - tracking_number (追蹤編號) : String
+        - sender_id (寄件人帳號) : String
+        - recipient_name (收件人姓名) : String
+        - recipient_address (收件地址) : String
+        - weight (重量) : Float
+        
+        ' ▼▼▼ 微調 1：對應需求 1.3 (尺寸) ▼▼▼
+        - package_type (包裹類型) : String 
+        
+        - service_type (服務類型) : String
+        - declared_value (申報價值) : Float
+        - contents (內容物) : String
+        
+        ' ▼▼▼ 微調 2：對應需求 1.2 (特殊標記) ▼▼▼
+        - special_tags (特殊標記) : String
+        
+        ' ▼▼▼ 微調 3：對應需求 1.5 (計費) ▼▼▼
+        - amount (運費金額) : Float
+        - payment_method (付款方式) : String
+        - status (目前狀態) : String
+        
+        ' --- 方法 ---
+        + create_parcel() (建立包裹) : String
+        + set_parcel_amount() (寫入運費) : void
+        + set_parcel_status() (更新狀態) : void
+    }
+
+    note right of Parcel
+      **設計與實作對應說明：**
+      1. [Dimensions]: 系統依 package_type 
+         (如"中型箱") 自動對應標準尺寸。
+      2. [Special Tags]: 支援易碎/危險品標記。
+      3. [Billing]: 採延遲寫入模式，
+         計費資訊與包裹實體綁定。
+    end note
+
+    enum ServiceType as "ServiceType\n(服務選項)" {
+        STANDARD (標準速遞)
+        OVERNIGHT (隔夜達)
+        ECONOMIC (經濟速遞)
+        twoday_delivery (兩日達)
+    }
+}
+
+' --- 4. 物流事件追蹤 (Logistics - 對應 Excel TrackingEvents 表) ---
+package "物流事件追蹤 (Logistics Tracking)" {
+    class TrackingEvent as "TrackingEvent\n(追蹤事件)" {
+        - event_id (事件ID) : String
+        - tracking_number (追蹤編號) : String
+        - event_type (事件類型) : String
+        - timestamp (時間戳記) : DateTime
+        - location (地點) : String
+        - operator (操作人員) : String
+        - description (描述) : String
+        - vehicle_id (運輸載具ID) : String
+        - warehouse_id (倉儲ID) : String
+        
+        + get_parcel_history() (查詢完整歷程) : List
+    }
+
+    enum TrackingStatus as "TrackingStatus\n(狀態列舉)" {
+        ' --- 正常運送流程 (Standard) ---
+        CREATED (建立包裹)
+        PICKUP (已收件)
+        IN_WAREHOUSE (進入倉儲)
+        LOADED (已裝車)
+        IN_TRANSIT (配送中)
+        DELIVERED (已送達)
+        SIGNED (已簽收)
+        
+        ' --- 分隔線語法 ---
+        .. 異常狀態 (Abnormal) ..
+        
+        DELAYED (延誤)
+        LOST (遺失)
+        DAMAGED (損毀)
+        RETURNED (退回)
+    }
+}
+
+' --- 關係定義 (Relationships) ---
+
+' 1. 帳戶與客戶
+Account "1" -right- "0..1" Customer : 綁定 (Links)
+Account .down.> UserRole : 定義角色
+
+' 2. 客戶與包裹
+Customer "1" -down- "0..*" Parcel : 寄送 (Sends)
+Account "1" -down- "0..*" Parcel : 建立 (Creates)
+
+' 3. 包裹細節
+Parcel .right.> ServiceType : 選擇服務
+Parcel *-- "1..*" TrackingEvent : 包含歷程 (Has History)
+
+' 4. 狀態
+TrackingEvent .right.> TrackingStatus : 對應狀態
+
+' --- 強制排版 (隱藏線條調整版面) ---
+Account -[hidden]down- Parcel
+Customer -[hidden]down- TrackingEvent
+
+@enduml
+
+
+
+
+
+

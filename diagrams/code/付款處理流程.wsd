@@ -1,0 +1,77 @@
+@startuml
+autonumber
+title Sequence Diagram: Process Payment (付款處理流程)
+
+' ▼▼▼ 字型設定 ▼▼▼
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam handwritten false
+skinparam shadowing false
+skinparam wrapWidth 250
+
+' --- 1. 角色定義 ---
+actor "User\n(客戶)" as User
+participant "Web UI\n(網頁介面)" as UI
+participant "app.py\n(後端控制器)" as Backend
+participant "models.py\ndb_operations.py\n(資料庫模組)" as DB
+
+' --- 2. 流程開始 ---
+
+' [場景 1] 使用者確認付款
+User -> UI: 1. 確認運費金額並點擊「確認付款」
+activate UI
+note right: 前端已根據重量試算出金額\n(例如: 250元)
+
+' [場景 2] 呼叫後端 API
+UI -> Backend: 2. POST /api/parcels/amount
+activate Backend
+
+' ▼▼▼ PM 備註：強調資料流 ▼▼▼
+note right
+  Payload:
+  {
+    "tracking_number": "TRK-2025-XXXX",
+    "amount": 250.0
+  }
+end note
+
+    ' [場景 3] 驗證資料 (對應程式碼第 282 行)
+    Backend -> Backend: 3. Validate Input\n(檢查金額格式是否正確)
+
+    alt 金額格式錯誤
+        Backend --> UI: 回傳 400 Error
+        UI -> User: 顯示 "金額錯誤"
+    else 格式正確
+        
+        ' [場景 4] 更新包裹主檔 (對應程式碼第 287 行)
+        note right of Backend
+          **Step A: 鎖定訂單金額**
+          (將金額寫入 Parcel 表)
+        end note
+        Backend -> DB: 4. update_parcel_amount(tracking, amount)
+        activate DB
+        DB --> Backend: 更新成功
+        deactivate DB
+
+        ' [場景 5] 寫入付款事件 (對應程式碼第 290 行)
+        note right of Backend
+          **Step B: 產生交易稽核紀錄**
+          (寫入 TrackingEvent: "付款完成")
+        end note
+        Backend -> DB: 5. append_tracking_event(\n{event_type: "付款完成", ...})
+        activate DB
+        DB --> Backend: 寫入成功
+        deactivate DB
+
+        ' [場景 6] 回傳結果
+        Backend --> UI: 回傳 200 OK (JSON Data)
+        deactivate Backend
+
+        ' [場景 7] 介面回饋
+        UI -> User: 顯示 "付款成功" 並產生收據畫面
+    end
+
+deactivate UI
+
+@enduml
+
+

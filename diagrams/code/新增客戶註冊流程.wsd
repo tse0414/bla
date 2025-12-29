@@ -1,0 +1,82 @@
+@startuml
+autonumber
+title Sequence Diagram: Register New Customer (新增客戶註冊流程)
+
+' ▼▼▼ 字型設定 (解決中文亂碼) ▼▼▼
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam handwritten false
+skinparam shadowing false
+skinparam wrapWidth 200
+
+' --- 1. 角色定義 ---
+actor "Anonymous User\n(未登入使用者)" as User
+participant "Web UI\n(網頁介面)" as UI
+participant "app.py\n(後端控制器)" as Backend
+participant "models.py\ndb_operations.py\n(資料庫模組)" as DB
+
+' --- 2. 流程開始 ---
+
+' [場景 1] 使用者輸入資料
+User -> UI: 1. 填寫註冊資訊 (帳號, 密碼, 姓名, 電話, 地址...)
+activate UI
+
+' [場景 2] 呼叫後端 API
+UI -> Backend: 2. POST /api/auth/register
+activate Backend
+note right: Payload: {username, password, name, phone, ...}
+
+    ' [場景 3] 檢查資料完整性 (基本驗證)
+    ' (對應程式碼第 142 行)
+    Backend -> Backend: 3. Validate Input (檢查帳密是否為空)
+    
+    alt 輸入資料不完整
+        Backend --> UI: 回傳 400 Error "請提供帳號與密碼"
+        UI -> User: 顯示錯誤提示
+    else 資料完整 -> 繼續流程
+
+        ' [場景 4] 檢查帳號是否已存在 (對應程式碼第 146 行)
+        Backend -> DB: 4. find_account(username)
+        activate DB
+        DB --> Backend: 回傳查詢結果 (存在/不存在)
+        deactivate DB
+
+        alt 帳號已存在 (Error Case)
+            Backend --> UI: 回傳 400 Error "帳號已存在"
+            UI -> User: 顯示錯誤警告
+        else 帳號不存在 (Happy Path)
+            
+            ' ▼▼▼ 關鍵步驟：資料分開儲存 ▼▼▼
+            
+            ' [場景 5] 步驟 A：寫入帳號權限 (對應程式碼第 150 行)
+            note right of Backend
+              **Step A: 建立登入帳號**
+              (寫入 Account 表：帳號/密碼/角色)
+            end note
+            Backend -> DB: 5. append_account({username, password, role="customer"})
+            activate DB
+            DB --> Backend: 儲存成功
+            deactivate DB
+
+            ' [場景 6] 步驟 B：寫入客戶詳細資料 (對應程式碼第 157 行)
+            note right of Backend
+              **Step B: 建立客戶檔案**
+              (寫入 Customer 表：姓名/電話/地址...)
+            end note
+            Backend -> DB: 6. append_customer({account: username, name, phone...})
+            activate DB
+            DB --> Backend: 儲存成功
+            deactivate DB
+
+            ' [場景 7] 回報最終結果 (對應程式碼第 166 行)
+            Backend --> UI: 回傳 200 OK (註冊成功訊息)
+            
+            UI -> User: 顯示 "註冊成功，請登入" 畫面
+        end
+    end
+
+deactivate Backend
+deactivate UI
+
+@enduml
+
+

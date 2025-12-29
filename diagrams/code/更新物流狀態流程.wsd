@@ -1,0 +1,80 @@
+@startuml
+autonumber
+title Sequence Diagram: Update Parcel Status (更新物流狀態流程)
+
+' ▼▼▼ 字型設定 ▼▼▼
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam handwritten false
+skinparam shadowing false
+skinparam wrapWidth 250
+
+' --- 1. 角色定義 ---
+actor "Driver/Staff\n(駕駛員/員工)" as User
+participant "Web UI\n(網頁介面)" as UI
+participant "app.py\n(後端控制器)" as Backend
+participant "models.py\ndb_operations.py\n(資料庫模組)" as DB
+
+' --- 2. 流程開始 ---
+
+' [場景 1] 駕駛員操作
+User -> UI: 1. 掃描單號並選擇新狀態\n(例如：已送達, 運輸中)
+activate UI
+note right: 同時輸入輔助資訊：\n- location (地點)\n- vehicle_id (車輛編號)\n- warehouse_id (倉儲編號)
+
+' [場景 2] 呼叫後端 API
+UI -> Backend: 2. POST /api/parcels/status
+activate Backend
+
+' ▼▼▼ PM 備註：強調 Payload 結構 ▼▼▼
+note right
+  Payload:
+  {
+    "tracking_number": "TRK-2025...",
+    "status": "已送達",
+    "location": "台北轉運站",
+    "vehicle_id": "Truck-A01",
+    "warehouse_id": "WH-TP01"
+  }
+end note
+
+    ' [場景 3] 權限檢查 (對應程式碼第 311 行)
+    Backend -> Backend: 3. Check Role (權限檢查)
+    
+    alt 角色是 Customer (權限不足)
+        Backend --> UI: 回傳 403 Forbidden
+        UI -> User: 顯示錯誤 "客戶無權修改狀態"
+    
+    else 角色是 Driver/Staff/Admin (權限通過)
+        
+        ' [場景 4] 更新包裹主檔 (對應程式碼第 333 行)
+        note right of Backend
+          **Step A: 更新當前狀態**
+          (修改 Parcel 表的 status 欄位)
+        end note
+        Backend -> DB: 4. update_parcel_status(tracking, status)
+        activate DB
+        DB --> Backend: 更新成功
+        deactivate DB
+
+        ' [場景 5] 寫入歷史事件 (對應程式碼第 340 行)
+        note right of Backend
+          **Step B: 記錄詳細歷程**
+          (寫入 TrackingEvent 表，包含車輛/倉儲ID)
+        end note
+        Backend -> DB: 5. append_tracking_event(event_data)
+        activate DB
+        DB --> Backend: 寫入成功
+        deactivate DB
+
+        ' [場景 6] 回傳結果
+        Backend --> UI: 回傳 200 OK (狀態更新完成)
+        
+        UI -> User: 顯示 "更新成功" 
+    end
+
+deactivate Backend
+deactivate UI
+
+@enduml
+
+
