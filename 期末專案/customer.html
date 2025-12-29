@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>客戶資料管理</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 24px 28px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+    p {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+    }
+    .btn {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      margin-right: 4px;
+    }
+    .btn-edit {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-email {
+      background: #0f766e;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <div class="header-row">
+    <h1>客戶資料管理</h1>
+    <button class="btn btn-secondary" onclick="goBack()">← 返回建立包裹</button>
+  </div>
+  
+  <p>只有作業人員與管理人員可以查看客戶資料；可進行編輯與發送 Email。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>客戶帳號</th>
+        <th>姓名</th>
+        <th>電話</th>
+        <th>Email</th>
+        <th>地址</th>
+        <th>客戶類型</th> <th>建立時間</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="customerBody"></tbody>
+  </table>
+</div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:5000";
+  const currentRole = localStorage.getItem("role") || "guest";
+  let customers = [];
+
+  function goBack() {
+      window.location.href = "parcel_tracking.html";
+  }
+
+  async function loadCustomers() {
+    const token = localStorage.getItem("jwt_token");
+    if (!token) {
+      alert("尚未登入");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/customers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        alert("無法讀取客戶資料 (權限不足或 Token 過期)");
+        return;
+      }
+
+      customers = await res.json();
+      renderTable();
+    } catch (e) {
+      console.error(e);
+      alert("連線錯誤");
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById("customerBody");
+    tbody.innerHTML = "";
+
+    customers.forEach(c => {
+      const tr = document.createElement("tr");
+
+      const canEdit = ["admin", "staff"].includes(currentRole);
+
+      // ✅ 處理客戶類型顯示文字 (三種類型)
+      let typeText = c.customer_type || "";
+      if (typeText === 'CONTRACT') {
+          typeText = '合約客戶(月結)';
+      } else if (typeText === 'NON_CONTRACT') {
+          typeText = '非合約(現金)';
+      } else if (typeText === 'PREPAID') {
+          typeText = '預付客戶';
+      }
+
+      tr.innerHTML = `
+        <td>${c.account || ""}</td>
+        <td>${c.name || ""}</td>
+        <td>${c.phone || ""}</td>
+        <td>${c.email || ""}</td>
+        <td>${c.address || ""}</td>
+        <td>${typeText}</td> <td>${c.created_at || ""}</td>
+        <td>
+          ${canEdit
+            ? `<button class="btn btn-edit" onclick="editCustomer('${c.account}')">編輯</button>`
+            : ""}
+          <button class="btn btn-email"
+            onclick="sendEmail('${c.account}', '${c.email || ""}')">
+            發送Email
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function editCustomer(account) {
+    const currentData = customers.find(c => c.account === account);
+    if (!currentData) return;
+
+    const newName = prompt("請輸入姓名:", currentData.name);
+    if (newName === null) return; 
+
+    const newPhone = prompt("請輸入電話:", currentData.phone);
+    if (newPhone === null) return;
+
+    const newEmail = prompt("請輸入 Email:", currentData.email);
+    if (newEmail === null) return;
+
+    const newAddr = prompt("請輸入地址:", currentData.address);
+    if (newAddr === null) return;
+
+    // ✅ 新增：編輯客戶類型 (預設帶入目前的值)
+    // 提示使用者輸入三種代碼之一
+    let newType = prompt(
+        "請輸入客戶類型代碼 (CONTRACT / NON_CONTRACT / PREPAID):\n\nCONTRACT = 合約客戶\nNON_CONTRACT = 非合約\nPREPAID = 預付客戶", 
+        currentData.customer_type
+    );
+    if (newType === null) newType = currentData.customer_type; // 若按取消則維持原值
+
+    const payload = {
+        name: newName,
+        phone: newPhone,
+        email: newEmail,
+        address: newAddr,
+        customer_type: newType // ✅ 加入更新 payload
+    };
+
+    const token = localStorage.getItem("jwt_token");
+    try {
+        const res = await fetch(`${API_BASE}/api/customers/${account}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            alert("更新成功");
+            loadCustomers(); 
+        } else {
+            const err = await res.json();
+            alert("更新失敗: " + (err.error || res.status));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("更新時發生連線錯誤");
+    }
+  }
+
+  function sendEmail(account, email) {
+    if (!email) {
+      alert(`客戶 ${account} 尚未填寫 Email`);
+      return;
+    }
+    alert(`（模擬發信）\n已將通知寄送至：${email}\n內容：親愛的 ${account} 您好...`);
+  }
+
+  window.onload = loadCustomers;
+</script>
+</body>
+</html>
