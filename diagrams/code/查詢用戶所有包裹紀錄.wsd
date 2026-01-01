@@ -17,7 +17,7 @@ participant "models.py\ndb_operations.py\n(資料庫模組)" as DB
 ' --- 2. 流程開始 ---
 
 ' [場景 1] 使用者點擊「我的包裹」
-User -> UI: 1. 點擊 "My Shipments" (我的包裹列表)
+User -> UI: 1. 點擊 "進階查詢與追蹤"
 activate UI
 
 ' [場景 2] 呼叫後端 API
@@ -70,5 +70,6 @@ note right: Header: Authorization (JWT Token)\n(系統需識別是誰在查)
 UI -> User: 顯示包裹清單表格
 
 @enduml
+
 
 
