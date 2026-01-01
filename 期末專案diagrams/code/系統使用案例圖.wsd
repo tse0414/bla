@@ -1,0 +1,104 @@
+@startuml
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
+left to right direction
+
+' --- 全域設定：讓線條變粗一點比較好看 ---
+skinparam arrowThickness 2
+
+title System Use Case Diagram (系統使用案例圖 - 對應程式碼版)
+
+' --- 1. 定義角色 (Actors) 與顏色 ---
+' ▼▼▼ 修正 1：CSR 改為 Staff (對應 app.py 的 role) ▼▼▼
+actor "Customer\n(客戶)" as Customer #CornflowerBlue
+actor "Staff\n(員工)" as Staff #MediumSeaGreen
+actor "Admin\n(管理員)" as Admin #IndianRed
+actor "Warehouse\n(倉儲人員)" as Warehouse #DarkOrange
+actor "Driver\n(駕駛員)" as Driver #MediumPurple
+
+' --- 系統邊界 (System Boundary) ---
+rectangle "Logistics & Billing System (物流與計費系統)" {
+
+    ' --- 1. 客戶管理類 ---
+    package "Customer Management (客戶管理)" as P1 {
+        usecase "建立/註冊帳號" as UC_Register
+        usecase "設定客戶資料" as UC_Profile
+        usecase "查看自身貨件資料" as UC_ViewMyShipments
+    }
+
+    ' --- 2. 包裹管理類 ---
+    package "Package Management (包裹管理)" as P2 {
+        usecase "建立包裹\n(產生追蹤碼)" as UC_CreatePkg
+        usecase "管理定價與服務" as UC_ManageService
+        ' ▼▼▼ 修正 3：新增 Excel 下載 (對應 download_excel API) ▼▼▼
+        usecase "匯出 Excel 報表" as UC_Download
+    }
+
+    ' --- 3. 物流追蹤類 ---
+    package "Logistics Tracking (物流追蹤)" as P3 {
+        usecase "更新物流狀態\n(含車輛/倉儲ID)" as UC_UpdateStatus
+        usecase "查詢狀態與歷史" as UC_QueryStatus
+        usecase "進階搜尋\n(依車輛/倉儲)" as UC_AdvSearch
+    }
+
+    ' --- 4. 計費與付款類 ---
+    package "Billing & Payment (計費付款)" as P4 {
+        usecase "試算運費" as UC_CalcCost
+        usecase "付款確認" as UC_Pay
+    }
+
+    ' --- 5. 權限與安全類 ---
+    package "Security (權限安全)" as P5 {
+        usecase "使用者角色存取控制" as UC_RBAC
+    }
+}
+
+' --- 連線關係 (Relationships) ---
+
+' 1. 🔵 客戶 (Customer) - 藍色線
+Customer -[#CornflowerBlue]up-> UC_Register
+Customer -[#CornflowerBlue]up-> UC_Profile
+Customer -[#CornflowerBlue]up-> UC_ViewMyShipments
+' ▼ 修正 2：客戶可以自己建立包裹 ▼
+Customer -[#CornflowerBlue]up-> UC_CreatePkg
+Customer -[#CornflowerBlue]up-> UC_QueryStatus
+Customer -[#CornflowerBlue]up-> UC_CalcCost
+Customer -[#CornflowerBlue]up-> UC_Pay
+
+' 2. 🟢 員工 (Staff) - 綠色線
+Staff -[#MediumSeaGreen]up-> UC_Register
+Staff -[#MediumSeaGreen]up-> UC_Profile
+Staff -[#MediumSeaGreen]up-> UC_CreatePkg
+Staff -[#MediumSeaGreen]up-> UC_QueryStatus
+Staff -[#MediumSeaGreen]up-> UC_UpdateStatus
+Staff -[#MediumSeaGreen]up-> UC_Download
+Staff -[#MediumSeaGreen]up-> UC_AdvSearch
+
+
+' 3. 🔴 管理員 (Admin) - 紅色線
+Admin -[#IndianRed]down-> UC_ManageService
+Admin -[#IndianRed]down-> UC_RBAC
+Admin -[#IndianRed]down-> UC_Download
+' (Admin 通常包含 Staff 的所有權限，為求圖面簡潔，這裡只畫管理職責)
+Admin -[#IndianRed]down-> UC_Profile
+Admin -[#IndianRed]down-> UC_Register
+Admin -[#IndianRed]down-> UC_CreatePkg
+Admin -[#IndianRed]down-> UC_QueryStatus
+Admin -[#IndianRed]down-> UC_AdvSearch
+Admin -[#IndianRed]down-> UC_UpdateStatus
+
+' 4. 🟠 倉儲人員 (Warehouse) - 橘色線
+Warehouse -[#DarkOrange]down-> UC_UpdateStatus
+Warehouse -[#DarkOrange]down-> UC_AdvSearch
+Warehouse -[#DarkOrange]down-> UC_QueryStatus
+
+' 5. 🟣 駕駛員 (Driver) - 紫色線
+Driver -[#MediumPurple]down-> UC_UpdateStatus
+Driver -[#MediumPurple]down-> UC_AdvSearch
+Driver -[#MediumPurple]down-> UC_QueryStatus
+
+
+@enduml
+

@@ -1,0 +1,80 @@
+@startuml
+autonumber
+title Sequence Diagram: Role-Based Access Control (權限控制流程)
+
+' ▼▼▼ 字型設定 ▼▼▼
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam handwritten false
+skinparam shadowing false
+skinparam wrapWidth 250
+
+' --- 1. 角色定義 ---
+actor "User\n(使用者)" as User
+participant "Web UI\n(網頁介面)" as UI
+participant "app.py\n(後端控制器)" as Backend
+participant "models.py\ndb_operations.py\n(資料庫模組)" as DB
+
+' --- 2. 流程開始 ---
+
+' [場景設定] 使用者嘗試執行敏感操作
+User -> UI: 1. 點擊「更新包裹狀態」按鈕
+activate UI
+
+' [場景 2] 呼叫後端
+UI -> Backend: 2. POST /api/parcels/status
+activate Backend
+note right: Header: Authorization: Bearer <JWT_Token>
+
+    ' [第一道防線：裝飾器驗證]
+    Backend -> Backend: 3. @token_required\n(驗證 Token 是否有效)
+    
+    alt Token 無效/過期
+        Backend --> UI: 回傳 401 Unauthorized
+        UI -> User: 顯示 "請先登入"
+    else Token 有效 -> 解析出 role (角色)
+        
+        ' [第二道防線：業務邏輯檢查]
+        ' (對應程式碼第 311 行)
+        Backend -> Backend: 4. Check User Role\n(檢查 Token 中的 role 欄位)
+
+        alt 角色 == "customer" (一般客戶)
+            
+            note right of Backend
+              **[Access Denied]**
+              程式碼邏輯：
+              if role == "customer":
+                  return 403
+            end note
+            
+            Backend --> UI: 回傳 403 Forbidden
+            deactivate Backend
+            
+            UI -> User: 顯示"權限不足：客戶無權修改狀態"
+            
+        else 角色 == "driver" / "admin" (授權人員)
+            
+            activate Backend
+            note right of Backend
+              **[Access Granted]**
+              角色符合要求，允許執行
+            end note
+
+            ' [執行業務邏輯]
+            Backend -> DB: 5. update_parcel_status(...)
+            activate DB
+            DB --> Backend: 更新成功
+            deactivate DB
+            
+            Backend --> UI: 回傳 200 OK
+            deactivate Backend
+
+            UI -> User: 顯示 "操作成功"
+        end
+    end
+
+deactivate UI
+
+@enduml
+
+
+

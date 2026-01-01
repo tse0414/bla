@@ -1,0 +1,75 @@
+\@startuml
+autonumber
+title Sequence Diagram: List User Parcels (查詢用戶所有包裹紀錄)
+
+' ▼▼▼ 字型設定 ▼▼▼
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam handwritten false
+skinparam shadowing false
+skinparam wrapWidth 250
+
+' --- 1. 角色定義 ---
+actor "User\n(客戶)" as User
+participant "Web UI\n(網頁介面)" as UI
+participant "app.py\n(後端控制器)" as Backend
+participant "models.py\ndb_operations.py\n(資料庫模組)" as DB
+
+' --- 2. 流程開始 ---
+
+' [場景 1] 使用者點擊「我的包裹」
+User -> UI: 1. 點擊 "進階查詢與追蹤"
+activate UI
+
+' [場景 2] 呼叫後端 API
+UI -> Backend: 2. GET /records
+activate Backend
+note right: Header: Authorization (JWT Token)\n(系統需識別是誰在查)
+
+    ' [場景 3] 權限與身分識別 (對應程式碼第 380 行)
+    Backend -> Backend: 3. Identify User Role\n(判斷是 Customer 還是 Admin)
+    
+    ' [場景 4] 讀取所有包裹資料 (對應程式碼第 387 行)
+    Backend -> DB: 4. read_parcels()
+    activate DB
+    DB --> Backend: 回傳所有包裹列表 (Raw Data)
+    deactivate DB
+
+    ' [場景 5] 資安過濾邏輯 (關鍵步驟！對應程式碼第 390 行)
+    alt 角色是 Customer (一般客戶)
+        Backend -> Backend: 5. Filter by Sender ID\n(只保留 sender_id == username 的資料)
+        note right
+          **[Privacy Filter]**
+          確保客戶只能看到自己寄出的包裹
+          (Security Requirement)
+        end note
+    else 角色是 Admin/Staff (內部員工)
+        Backend -> Backend: 保留所有資料\n(或是依 vehicle_id 進行進階篩選)
+    end
+
+    ' [場景 6] 格式化回傳資料 (對應程式碼第 418 行 loop)
+    Backend -> Backend: 6. Format JSON Response\n(整理日期、金額、狀態)
+
+    ' [場景 7] 回傳結果
+    Backend --> UI: 回傳 JSON List
+    note right
+      Response:
+      [
+        {
+          "tracking_no": "TRK-001",
+          "receiver_name": "Alice",
+          "amount": 250,
+          "status": "已送達",
+          "date": "2025-01-01"
+        },
+        ...
+      ]
+    end note
+    deactivate Backend
+
+' [場景 8] 渲染列表
+UI -> User: 顯示包裹清單表格
+
+@enduml
+
+
+
